@@ -18,9 +18,6 @@ $(document).ready(function () {
     let pitcherCategoriesAll = $("#pitcherTable thead th");
     // [position, type, 'IP', 'W', 'L', 'H', 'HR', 'BB', 'HBP', 'K', 'R', 'ER', 'ERA', 'WHIP', 'K9', 'QS', 'HLD', 'SV', 'SV_H', 'BSV', empty]
 
-    //  所有自己選的Fielder, Pitcher
-    let fielders = $("#fielderTable tbody tr");
-    let pitchers = $("#pitcherTable tbody tr");
     //  Fielder, Pitcher的加總列
     let totalFielder = $("#fielderTable .total");
     let totalPitcher = $("#pitcherTable .total");
@@ -42,12 +39,36 @@ $(document).ready(function () {
     let hasValueFielder = false;
     let hasValuePitcher = false;
 
-    // 以下處理剛載入網頁後
-    // Fielder, Pitcher表格中
-    // Totals列的計算
-    // 因為從Flask載入HTML時已經傳入stats了
-    // 所以就根據元素的內容去處理
+    /* 
+    ================================
+    設定BN列的CSS。
 
+    因為HTML寫法的原因
+    所以在載入後才指派tr元素的bench class
+    ================================
+    */
+    function addBenchCSS() {
+        positionButtons = $(".positionButton");
+        positionButtons.each(function () {
+            if ($(this).text() == "BN") {
+                $(this).parent().parent().addClass("bench");
+            }
+        })
+    }
+    addBenchCSS();
+
+    //  所有自己選的Fielder, Pitcher
+    let fielders = $("#fielderTable tbody tr");
+    let pitchers = $("#pitcherTable tbody tr");
+    console.log(fielders);
+    /*
+    =================================
+    處理剛載入網頁後
+    Fielder, Pitcher表格中，Totals列的計算。
+
+    會直接根據元素的內容去做計算。
+    =================================
+    */
     function calculateTotalAfterLoading() {
         // Fielder
 
@@ -69,9 +90,12 @@ $(document).ready(function () {
                 return false;
             }
             for (let i = 0; i < cateTotalFielder.length; i++) {
+                $(this).removeClass("editable");
+                $(this).find(".positionButton").removeClass("positionButton");
                 hasValueFielder = true;
-                // console.log($(this).children().eq(i + 3).text());
-                cateTotalFielder[i] += Number($(this).children().eq(i + 3).text());
+                if (!$(this).hasClass("bench")) {
+                    cateTotalFielder[i] += Number($(this).children().eq(i + 3).text());
+                };
             }
         });
 
@@ -147,25 +171,30 @@ $(document).ready(function () {
                 return false;
             }
             for (let i = 0; i < cateTotalPitcher.length; i++) {
+                $(this).removeClass("editable");
+                $(this).find(".positionButton").removeClass("positionButton");
                 hasValuePitcher = true;
-                // IP要例外處理，因為有進位問題
-                if (i == 0) {
-                    cateTotalPitcher[i] += Number($(this).children().eq(i + 2).text());
-                    let int = parseInt(cateTotalPitcher[i]);
-                    let decimal = parseFloat(cateTotalPitcher[i]) - int;
-                    if (decimal * 10 / 3 >= 1) {
-                        int++;
-                        decimal -= 0.3;
+
+                if (!$(this).hasClass("bench")) {
+                    // IP要例外處理，因為有進位問題
+                    if (i == 0) {
+                        cateTotalPitcher[i] += Number($(this).children().eq(i + 2).text());
+                        let int = parseInt(cateTotalPitcher[i]);
+                        let decimal = parseFloat(cateTotalPitcher[i]) - int;
+                        if (decimal * 10 / 3 >= 1) {
+                            int++;
+                            decimal -= 0.3;
+                        }
+                        cateTotalPitcher[i] = int + decimal;
                     }
-                    cateTotalPitcher[i] = int + decimal;
-                }
-                // ERA, WHIP, K9之前的比項
-                else if (i < 10) {
-                    cateTotalPitcher[i] += Number($(this).children().eq(i + 2).text());
-                }
-                // ERA, WHIP, K9之後的比項
-                else {
-                    cateTotalPitcher[i] += Number($(this).children().eq(i + 5).text());
+                    // ERA, WHIP, K9之前的比項
+                    else if (i < 10) {
+                        cateTotalPitcher[i] += Number($(this).children().eq(i + 2).text());
+                    }
+                    // ERA, WHIP, K9之後的比項
+                    else {
+                        cateTotalPitcher[i] += Number($(this).children().eq(i + 5).text());
+                    }
                 }
             }
         });
@@ -240,18 +269,6 @@ $(document).ready(function () {
         }
     }
     calculateTotalAfterLoading();
-
-    // 因為HTML寫法的原因
-    // 所以在載入後才指派tr元素的bench class
-    function addBenchCSS() {
-        positionButtons = $(".positionButton");
-        positionButtons.each(function () {
-            if ($(this).text() == "BN") {
-                $(this).parent().parent().addClass("bench");
-            }
-        })
-    }
-    addBenchCSS();
 
 
     function swapElement(type, e1, e2) {
