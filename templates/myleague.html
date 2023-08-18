@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>My League</title>
+    <style>
+        #buttonbar {
+            display: flex;
+        }
+    </style>
+    <script src={{ url_for("static", filename="dynamic/jQuery.js") }}></script>
+    <script>
+        $(document).ready(function() {
+            $("button").mouseenter(function() {
+                $("#date").text(Date());
+            });
+            $("button").mouseleave(function() {
+                $("#date").text("");
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <h1>歡迎登入Fantasy Baseball  <button class="time">游標移動至此以顯示時間</button></h1>
+    <h2 id="date"></h2>
+    <h3>您的帳號是: {{ account }}, 您支持的球隊為:{{ team }}</h3>
+
+    <div id="buttonbar">
+        <form action={{ url_for("player") }} method="POST">
+            <input type="hidden" name="account" value={{ account }}>
+            <input type="submit" value="My Team">
+        </form>
+
+        <form action={{ url_for("matchup") }} method="POST">
+            <input type="hidden" name="account" value={{ account }}>
+            <input type="submit" value="Matchup">
+        </form>
+
+        <form action={{ url_for("draft") }} method="POST">
+            <input type="hidden" name="account" value={{ account }}>
+            <input type="submit" class="join" value="Draft">
+        </form>
+    </div>
+
+
+</body>
+
+</html>

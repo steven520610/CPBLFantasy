@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href={{url_for("static",filename="styles/player.css")}} rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
+    <title>您的首頁</title>
+    <script src={{url_for("static", filename="dynamic/jQuery.js")}}></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script src={{ url_for("static", filename="dynamic/socket.io.min.js") }}></script>
+    <script src={{ url_for("static", filename="dynamic/socket.io.min.js.map") }}></script>
+    <script src={{ url_for("static", filename="dynamic/player.js")}}></script>
+</head>
+
+<body>
+    <header>
+        <div id="title">
+            <div id="message" value={{ account }}>
+                <h1>帳號:{{ account }}，您的球員列表</h1>
+            </div>
+            <div id="date">
+                <h1></h1>
+            </div>
+        </div>
+    </header>
+    <body>
+        <div id="bodyContainer">
+            <div id="fielderTable" class="playerTable">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="position">Pos</th>
+                            <th class="type">Batters</th>
+                            <th class="stat first">H/AB*</th>
+                            {% for T_fielder_category in totalFielderCategories %}
+                                {% if T_fielder_category in selectFielderCategories %}
+                                    <th class="stat">{{ T_fielder_category }}</th>
+                                {% else %}
+                                    <th class="notselected">{{ T_fielder_category }}</th>
+                                {% endif %}
+                            {% endfor %}
+                            <th class="empty"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set ns = namespace(fielder_index=0, position_index=0) %}
+
+                        {% for fielder in fielders %}
+                            {% if not fielder %}
+                                <tr class="editable">
+                                    {% if ns.position_index < 10 %}
+                                        <td class="position">
+                                            <span class="positionButton">{{ positionDict["Fielder"][ns.position_index] }}</span>
+                                        </td>
+                                        {% set ns.position_index = ns.position_index + 1 %}
+                                    {% else %}
+                                        <td class="position">
+                                            <span class="positionButton">BN</span>
+                                        </td>
+                                    {% endif %}
+                                    <td class="type player">(Empty)</td>
+                                    <td class="stat first"></td>
+                                    {% for T_fielder_category in totalFielderCategories %}
+                                        {% if T_fielder_category in selectFielderCategories %}
+                                            <td class="stat"></td>
+                                        {% else %}
+                                            <td class="notselected"></td>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% set ns.fielder_index = ns.fielder_index + 1 %}
+                                    <td class="empty"></td>
+                                </tr>
+                            {% else %}
+                                <tr class="editable">
+                                    {% if ns.position_index < 10 %}
+                                        <td class="position">
+                                                <span class="positionButton">{{ positionDict["Fielder"][ns.position_index] }}</span>
+                                        </td>
+                                        {% set ns.position_index = ns.position_index + 1 %}
+                                    {% else %}
+                                        <td class="position">
+                                            <span class="positionButton">BN</span>
+                                        </td>
+                                    {% endif %}
+                                    <td class="type player">
+                                        <a href="{{ 'https://www.cpbl.com.tw/team/person?Acnt=000000' + fielder.player_id}}" 
+                                        class="link"
+                                        target="_blank">{{ fielder.name }}</a>
+                                        <span class="playerInfo">
+                                            {{ " CTB - " + fielder.position if fielder.team == "中信兄弟" 
+                                                else " RKM - " + fielder.position if fielder.team == "樂天桃猿" 
+                                                else " WD - " + fielder.position if fielder.team == "味全龍" 
+                                                else " FG - " + fielder.position if fielder.team == "富邦悍將" 
+                                                else " UL - " + fielder.position  }}
+                                        </span>
+                                    </td>
+                                    {% if not fielder.inlineup %}
+                                        <td class="stat first">-/-</td>
+                                        {% for T_fielder_category in totalFielderCategories %}
+                                            {% if T_fielder_category in selectFielderCategories %}
+                                                <td class="stat">-</td>
+                                            {% else %}
+                                                <td class="notselected">-</td>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        <td class="stat first">{{ existedFieldersStats[ns.fielder_index][4] }}/{{ existedFieldersStats[ns.fielder_index][1] }}</td>
+                                        {% for T_fielder_category in totalFielderCategories %}
+                                            {% if T_fielder_category in selectFielderCategories %}
+                                                {% if existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3] | isinstance("float") %}
+                                                    {% if existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3] >= 1 %}
+                                                        <td class="stat">{{ "{:.3f}".format(existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3]) }}</td>
+                                                    {% else %}
+                                                        <td class="stat">{{ "{:.3f}".format(existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3])[1:] }}</td>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <td class="stat">{{ existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3] }}</td>
+                                                {% endif %}
+                                            {% else %}
+                                                {% if existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3] | isinstance("float") %}
+                                                    <td class="notselected">{{ "{:.3f}".format(existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3]) }}</td>
+                                                {% else %}
+                                                    <td class="notselected">{{ existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3] }}</td>
+                                                {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% set ns.fielder_index = ns.fielder_index + 1 %}
+                                    {% endif %}
+                                    <td class="empty"></td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                        <tr class="total">
+                            <td></td>
+                            <td>Starting Lineup Totals</td>
+                            <td class="stat first">-/-</td>
+                            {% for T_fielder_category in totalFielderCategories %}
+                                {% if T_fielder_category in selectFielderCategories %}
+                                    <td class="stat">-</td>
+                                {% else %}
+                                    <td class="notselected">-</td>
+                                {% endif %}
+                            {% endfor %}
+                            <td class="empty"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="pitcherTable" class="playerTable">
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="position">Pos</th>
+                            <th class="type">Pitchers</th>
+                            {% for T_pitcher_category in totalPitcherCategories %}
+                                {% if T_pitcher_category == "IP" %}
+                                    <th class="stat first">{{ T_pitcher_category + "*" }}</th>
+                                {% elif T_pitcher_category == "SV_H" %}
+                                    <th class="stat">SV+H</th>
+                                {% elif T_pitcher_category in selectPitcherCategories %}
+                                    <th class="stat">{{ T_pitcher_category }}</th>
+                                {% else %}
+                                    <th class="notselected">{{ T_pitcher_category }}</th>
+                                {% endif %}
+                            {% endfor %}
+                            <th class="empty"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set ns = namespace(pitcher_index=0, position_index=0)%}
+                        {% for pitcher in pitchers %}
+                            {% if not pitcher %}
+                                <tr class="editable">
+                                {% if ns.position_index < 6 %}
+                                    <td class="position">
+                                        <span class="positionButton">{{ positionDict["Pitcher"][ns.position_index] }}</span>
+                                    </td>
+                                    {% set ns.position_index = ns.position_index + 1 %}
+                                {% else %}
+                                    <td class="position">
+                                        <span class="positionButton">BN</span>
+                                    </td>
+                                {% endif %}
+                                    <td class="type player">(Empty)</td>
+                                    <td class="stat first"></td>
+                                    {% for T_pitcher_category in totalPitcherCategories %}
+                                        {% if T_pitcher_category in selectPitcherCategories %}
+                                            <td class="stat"></td>
+                                        {% else %}
+                                            <td class="notselected"></td>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% set ns.pitcher_index = ns.pitcher_index + 1 %}
+                                    <td class="empty"></td>
+                                </tr>
+                            {% else %}
+                                <tr class="editable">
+                                    {% if ns.position_index < 6 %}
+                                        <td class="position">
+                                            <span class="positionButton">{{ positionDict["Pitcher"][ns.position_index] }}</span>
+                                        </td>
+                                        {% set ns.position_index = ns.position_index + 1 %}
+                                    {% else %}
+                                        <td class="position">
+                                            <span class="positionButton">BN</span>
+                                        </td>
+                                    {% endif %}
+                                    <td class="type player">
+                                        <a href="{{ 'https://www.cpbl.com.tw/team/person?Acnt=000000' + pitcher.player_id}}" 
+                                            class="link"
+                                            target="_blank">{{ pitcher.name }}</a>
+                                        <span class="playerInfo">
+                                            {{ " CTB - " + pitcher.position if pitcher.team == "中信兄弟" 
+                                                else " RKM - " + pitcher.position if pitcher.team == "樂天桃猿" 
+                                                else " WD - " + pitcher.position if pitcher.team == "味全龍" 
+                                                else " FG - " + pitcher.position if pitcher.team == "富邦悍將" 
+                                                else " UL - " + pitcher.position  }}
+                                        </span>
+                                    </td>
+                                {% if pitcher.inlineup %}
+                                    {% for T_pitcher_category in totalPitcherCategories %}
+                                        {% if loop.first %}
+                                            <td class="stat first">{{ "{:.1f}".format(existedPitchersStats[ns.pitcher_index][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3]) }}</td>
+                                        {% elif T_pitcher_category in selectPitcherCategories %}
+                                            {% if existedPitchersStats[ns.pitcher_index][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
+                                                {% if existedPitchersStats[ns.pitcher_index][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] > 1000 %}
+                                                    <td class="stat">INF</td>
+                                                {% else %}
+                                                    <td class="stat">{{ "{:.2f}".format((existedPitchersStats[ns.pitcher_index][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                {% endif %}
+                                            {% else %}
+                                                <td class="stat">{{ existedPitchersStats[ns.pitcher_index][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
+                                            {% endif %}
+                                        {% else %}
+                                            {% if existedPitchersStats[ns.pitcher_index][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
+                                                <td class="notselected">{{ "{:.2f}".format((existedPitchersStats[ns.pitcher_index][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                            {% else %}
+                                                <td class="notselected">{{ existedPitchersStats[ns.pitcher_index][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% set ns.pitcher_index = ns.pitcher_index + 1 %}
+                                {% else %}
+                                    {% for T_pitcher_category in totalPitcherCategories %}
+                                        {% if T_pitcher_category in selectPitcherCategories %}
+                                            <td class="stat">-</td>
+                                        {% else %}
+                                            <td class="notselected">-</td>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                    <td class="empty"></td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                        <tr class="total">
+                            <td></td>
+                            <td>Starting Lineup Totals</td>
+                            {% for T_pitcher_category in totalPitcherCategories %}
+                                {% if T_pitcher_category in selectPitcherCategories %}
+                                    <td class="stat">-</td>
+                                {% else %}
+                                    <td class="notselected">-</td>
+                                {% endif %}
+                            {% endfor %}
+                            <td class="empty"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </body>
+</body>
+
+</html>

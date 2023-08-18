@@ -1,0 +1,9 @@
+config.py
+static/img/player/
+__pycache__/
+範例圖/
+選秀順序.key
+msedgedriver
+.Rapp.history
+static/img/
+static/dynamic/.Rhistory

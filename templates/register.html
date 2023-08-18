@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>Register</head>
+
+<body>
+    <form method="POST" action={{ url_for("register")}}>
+        <p>
+            <label for="account">您的帳號：</label>
+            <input type="text" id="account" name="account">
+        </p>
+
+        <p>
+            <label for="password">您的密碼：</label>
+            <input type="password" id="password" name="password">
+        </p>
+
+        <div>
+            請勾選你支持的球隊:<br>
+            <input type="radio" name="team" value="Brothers">中信兄弟
+            <input type="radio" name="team" value="Guardians">富邦悍將
+            <input type="radio" name="team" value="Monkeys">樂天桃猿
+            <input type="radio" name="team" value="Lions">統一獅
+            <input type="radio" name="team" value="Dragons">味全龍
+            <input type="radio" name="team" value="Hawks">台鋼雄鷹
+        </div>
+        
+        <p>
+            <input type="submit" value="註冊">
+        </p>
+    </form>
+    {% if message %}
+        <p>{{ message }} </p>
+    {% endif %}
+</body>
+
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Manager</title>
+    <script src={{ url_for("static", filename="dynamic/jQuery.js") }}></script>
+    <script>
+        $(document).ready(function() {
+            $("#submit").click(function(e) {
+                console.log(!$("#confirm").prop("checked"));
+                if (!$("#confirm").prop("checked")) {
+                    e.preventDefault();
+                    alert("請勾選我同意！");
+                }
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <h1>歡迎登入Fantasy Baseball</h1>
+    <h3>您現在使用的是管理員帳號</h3>
+    <hr>
+    <form action={{ url_for("manager") }} method="POST">
+        <p>
+            <label>選擇打擊比項:</label>
+            <input type="checkbox" name="Batting" value="RBI">RBI
+            <input type="checkbox" name="Batting" value="R">R
+            <input type="checkbox" name="Batting" value="H">H
+            <input type="checkbox" name="Batting" value="1H">1H
+            <input type="checkbox" name="Batting" value="2H">2H
+            <input type="checkbox" name="Batting" value="3H">3H
+            <input type="checkbox" name="Batting" value="HR">HR
+            <input type="checkbox" name="Batting" value="TB">TB
+            <input type="checkbox" name="Batting" value="K">K
+            <input type="checkbox" name="Batting" value="SB">SB
+            <input type="checkbox" name="Batting" value="OBP">OBP
+            <input type="checkbox" name="Batting" value="SLG">SLG
+            <input type="checkbox" name="Batting" value="AVG">AVG
+            <input type="checkbox" name="Batting" value="DP">DP
+            <input type="checkbox" name="Batting" value="BUNT">BUNT
+            <input type="checkbox" name="Batting" value="SF">SF
+            <input type="checkbox" name="Batting" value="BB">BB
+            <input type="checkbox" name="Batting" value="IBB">IBB
+            <input type="checkbox" name="Batting" value="HBP">HBP
+            <input type="checkbox" name="Batting" value="CS">CS
+            <input type="checkbox" name="Batting" value="OPS">OPS
+        </p>
+
+        <p>
+            <label>選擇投球比項:</label>
+            <input type="checkbox" name="Pitching" value="W">W
+            <input type="checkbox" name="Pitching" value="L">L
+            <input type="checkbox" name="Pitching" value="SV">SV
+            <input type="checkbox" name="Pitching" value="BSV">BSV
+            <input type="checkbox" name="Pitching" value="HLD">HLD
+            <input type="checkbox" name="Pitching" value="SV+H">SV+H
+            <input type="checkbox" name="Pitching" value="WHIP">WHIP
+            <input type="checkbox" name="Pitching" value="ERA">ERA
+            <input type="checkbox" name="Pitching" value="H">H
+            <input type="checkbox" name="Pitching" value="HR">HR
+            <input type="checkbox" name="Pitching" value="BB">BB
+            <input type="checkbox" name="Pitching" value="HBP">HBP
+            <input type="checkbox" name="Pitching" value="K">K
+            <input type="checkbox" name="Pitching" value="R">R
+            <input type="checkbox" name="Pitching" value="ER">ER
+            <input type="checkbox" name="Pitching" value="K9">K/9
+            <input type="checkbox" name="Pitching" value="QS">QS
+        </p>
+
+        <input type="checkbox" id="confirm" name="confirm" value="yes">我同意此設定
+        <button type="submit" id="submit">確認</button>
+        {% if message %}
+            {{ message }}
+        {% endif %}
+    </form>
+    <hr>
+
+    <a href={{ url_for("home") }}>回首頁</a>
+    
+    
+</body>
+
+</html>

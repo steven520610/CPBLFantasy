@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href={{ url_for('static', filename='styles/draft.css') }} rel="stylesheet">
+    <title>您的首頁</title>
+    <script src={{ url_for("static", filename="dynamic/jQuery.js") }}></script>
+    <script src={{ url_for("static", filename="dynamic/socket.io.min.js") }}></script>
+    <script src={{ url_for("static", filename="dynamic/socket.io.min.js.map") }}></script>
+    <script src={{ url_for("static", filename="dynamic/draft.js") }}></script>
+    
+    
+
+</head>
+
+<body>
+    <!--上半部，包含Timer、選取的球員照片、選取的球員數據-->
+    <header>
+        <!--Timer的部分-->
+        <div id="clockBar">
+            <div id="clockTop">
+                <div id="timer">0:00</div>
+                <div id="right">
+                    <div class="item" id="bottom">
+                        <span id="clockRound">Round 1</span>
+                    </div>
+                    
+                    <div class="item" id="center">
+                        <span>Pick 1</span>
+                    </div>
+                    
+                    <div class="item" id="top"> 
+                        <span id="clockOverall">1st Overall</span>
+                    </div>
+                    
+                </div>
+            </div>
+                <div id="turnIndicator">The draft will start soon.</div>
+        </div>
+
+
+        <!--選取的球員-->
+        <div id="showPlayer">
+            <div id="showTop">
+                <div id="img">
+                    <img src="/img/player/蘇智傑1474.png" id="playerImg">
+                </div>
+                
+                <div id="playerInfoBar">
+                    <div class="name">蘇智傑</div>
+                    <div class="info">UL | OF</div>
+                </div>
+
+                <div id="draftBar">
+                    <button id="draft">
+                        <img src={{url_for("static", filename="img/draft.png")}} alt="draft">
+                    </button>
+                </div>
+            </div>
+
+            <div id="showBottom">
+                <table>
+                    <thead>
+                        <tr id="showHead">
+                            <th class="season">Season</th>
+                            <th class="stat"></th>
+                            <th class="stat"></th>
+                            <th class="stat"></th>
+                            <th class="stat"></th>
+                            <th class="stat"></th>
+                            <th class="stat"></th>
+                            <th class="stat"></th>
+                            <th class="stat"></th>
+                            <th class="stat"></th>
+                            <th class="stat"></th>
+                            <th class="stat"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr id="showBody">
+                            <td class="season">2023 Total</td>
+                            <td class="stat"></td>
+                            <td class="stat"></td>
+                            <td class="stat"></td>
+                            <td class="stat"></td>
+                            <td class="stat"></td>
+                            <td class="stat"></td>
+                            <td class="stat"></td>
+                            <td class="stat"></td>
+                            <td class="stat"></td>
+                            <td class="stat"></td>
+                            <td class="stat"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+        
+    </header>
+    <!--下半部，包括選秀帳號、不同表格-->
+    <main>
+        <!--左側之選秀帳號-->
+        <div id="bodyContainer">
+            <div id="accountBar">
+
+                <div id="login">{{ login_account }}</div>
+                
+                {% set ns = namespace(count=0) %}
+                <span id="roundTitle"><h2>Drafting now!</h2></span>
+                {% for i in range(20) %}
+                    <div class="round">
+                        {% if i is even %}
+                            {% for account in accounts %}
+                                {% set ns.count = ns.count + 1 %}
+                                <p>
+                                    <span class="order">{{ ns.count }}</span>
+                                    <img src={{ url_for("static", filename="img/logo/{}.png".format(account.account))}} class="logo">
+                                    <span class="account">{{ account.account }}</span>
+                                </p>
+                            {% endfor %}
+                        {% else %}
+                            {% for account in accounts|reverse %}
+                                {% set ns.count = ns.count + 1 %}
+                                <p>
+                                    <span class="order">{{ ns.count }}</span>
+                                    <img src={{ url_for("static", filename="img/logo/{}.png".format(account.account))}} class="logo">
+                                    <span class="account">{{ account.account }}</span>
+                                </p>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    {% if i < 19 %}
+                        <h3 class="line">
+                            <span class="roundSeperator"> Round {{ i+2 }} </span>
+                        </h3>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            <!--因為body的右側，需要透過按鈕來選擇要顯示的四個不同表格，
+                所以用一個div區塊切分按鈕區塊和表格區塊-->
+            <div id="bodyRight">
+                <!--按鈕區塊-->
+                <div id="rightButton">
+                    <div class="selected">Players</div>
+                    <div>Teams</div>
+                    <div>Draft Results</div>
+                    <div>Standings</div>
+                </div>
+                <!--表格區塊-->
+                <!--Players-->
+                <div id="playersTable">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th class="stat sort">Rank</th>
+                                <th class="playerName">Player</th>
+                                <th class="stat sort">PA</th>
+                                <th class="stat sort">AB</th>
+                                {% for fielder_category in fielder_categories %}
+                                    <th class="stat sort">{{ fielder_category }}</th>
+                                {% endfor %}
+
+                                {% for pitcher_category in pitcher_categories %}
+                                    {% if pitcher_category != "SV_H" %}
+                                        <th class="stat sort">{{ pitcher_category }}</th>
+                                    {% else %}
+                                        <th class="stat sort">{{ "SV+H" }}</th>
+                                    {% endif %}
+                                {% endfor %}
+                            </tr>
+                        </thead>
+    
+                        <tbody>
+                            {% for player in players %}
+                                {% if player | isinstance('Fielder') %}
+                                <tr>
+                                    <td class="playerID">{{ player.player_id }}</td>
+                                    <td class="stat rank">{{ player.Rank }}</td>
+                                    <td class="playerName" 
+                                    data-content="{{ " CTB - " + player.position if player.team == "中信兄弟" 
+                                                else " RKM - " + player.position if player.team == "樂天桃猿" 
+                                                else " WD - " + player.position if player.team == "味全龍" 
+                                                else " FG - " + player.position if player.team == "富邦悍將" 
+                                                else " UL - " + player.position  }}">{{ player.name }}</td>
+                                    <td class="stat">{{ player.PA }}</td>
+                                    <td class="stat">{{ player.AB }}</td>
+                                    {% for fielder_category in fielder_categories %}
+                                        {% if fielder_category in ["AVG", "OPS"] %}
+                                            <td class="stat">{{ "{:.3f}".format(get_attribute(player, fielder_category)) }}</td>
+                                        {% else %}
+                                            <td class="stat">{{ get_attribute(player, fielder_category) }}</td>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% for pitcher_category in pitcher_categories %}
+                                        <td class="empty"></td>
+                                    {% endfor %}
+                                </tr>
+    
+                                {% else %}
+                                <tr>
+                                    <td class="playerID">{{ player.player_id }}</td>
+                                    <td class="stat rank">{{ player.Rank }}</td>
+                                    <td class="playerName" 
+                                    data-content="{{ " CTB - " + player.position if player.team == "中信兄弟" 
+                                                else " RKM - " + player.position if player.team == "樂天桃猿" 
+                                                else " WD - " + player.position if player.team == "味全龍" 
+                                                else " FG - " + player.position if player.team == "富邦悍將" 
+                                                else " UL - " + player.position  }}">{{ player.name }}</td>
+                                    <td class="empty"></td>
+                                    <td class="empty"></td>
+                                    {% for fielder_category in fielder_categories %}
+                                        <td class="empty"></td>
+                                    {% endfor %}
+
+                                    {% for pitcher_category in pitcher_categories %}
+                                        {% if pitcher_category == "K9" %}
+                                            <td class="stat">{{ player.K9|round(2) }}</td>
+                                        {% else %}
+                                            <td class="stat">{{ get_attribute(player, pitcher_category) }}</td>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!--Teams-->
+                <div id="teamsTable">
+                    <table>
+                        <colgroup>
+                            <col style="width:6.5%">
+                            <col style="width:15.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                        </colgroup>
+                        <thead>
+                            <tr class="teamsTitle">
+                                <th colspan="14">Batters</th>
+                            </tr>
+                            <tr class="teamsHeader">
+                                <th class="position">Pos</th>
+                                <th class="playerName">Player</th>
+                                <th class="stat">Rank</th>
+                                <th class="stat">PA</th>
+                                <th class="stat">AB</th>
+                                <th class="stat">RBI</th>
+                                <th class="stat">R</th>
+                                <th class="stat">HR</th>
+                                <th class="stat">TB</th>
+                                <th class="stat">K</th>
+                                <th class="stat">BB</th>
+                                <th class="stat">SB</th>
+                                <th class="stat">AVG</th>
+                                <th class="stat">OPS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in range(14) %}
+                                <tr>
+                                    <td class="position">{{ positions["fielders"][i] }}</td>
+                                    <td class="playerName"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <table>
+                        <colgroup>
+                            <col style="width:6.5%">
+                            <col style="width:15.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                            <col style="width:6.5%">
+                        </colgroup>
+                        <thead>
+                            <tr class="teamsTitle">
+                                <th colspan="14">Pitchers</th>
+                            </tr>
+                            <tr class="teamsHeader">
+                                <th class="position">Pos</th>
+                                <th class="playerName">Player</th>
+                                <th class="stat">Rank</th>
+                                <th class="stat">IP</th>
+                                <th class="stat">W</th>
+                                <th class="stat">SV+H</th>
+                                <th class="stat">HR</th>
+                                <th class="stat">WHIP</th>
+                                <th class="stat">ERA</th>
+                                <th class="stat">K/9</th>
+                                <th class="stat">K</th>
+                                <th class="stat">BB</th>
+                                <th class="stat">QS</th>
+                                <th class="stat">K/BB</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for i in range(10) %}
+                                <tr>
+                                    <td class="position">{{ positions["pitchers"][i] }}</td>
+                                    <td class="playerName"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                    <td class="stat"></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!--Draft Results-->
+                <div id="draftResultsTable">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>
+
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!--Standings-->
+                <div id="standingsTable">
+                    
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+
+</html>
