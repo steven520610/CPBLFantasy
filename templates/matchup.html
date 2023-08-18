@@ -4,14 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href={{url_for("static",filename="styles/matchup.css")}} rel="stylesheet">
+    <link href={{url_for("static",filename="css/matchup.css")}} rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
     <title>您的首頁</title>
-    <script src={{url_for("static", filename="dynamic/jQuery.js")}}></script>
+    <script src={{url_for("static", filename="js/jQuery.js")}}></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
-    <script src={{ url_for("static", filename="dynamic/socket.io.min.js") }}></script>
-    <script src={{ url_for("static", filename="dynamic/socket.io.min.js.map") }}></script>
-    <script src={{ url_for("static", filename="dynamic/matchup.js")}}></script>
+    <script src={{ url_for("static", filename="js/socket.io.min.js") }}></script>
+    <script src={{ url_for("static", filename="js/socket.io.min.js.map") }}></script>
+    <script src={{ url_for("static", filename="js/matchup.js")}}></script>
 </head>
 
 <body>
@@ -616,7 +616,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="stat">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)|round(2)) }}</td>
                                                     {% else %}
                                                         <td class="stat">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -624,7 +624,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="notselected">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)|round(2)) }}</td>
                                                     {% else %}
                                                         <td class="notselected">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -667,7 +667,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="stat">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)|round(2)) }}</td>
                                                     {% else %}
                                                         <td class="stat">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -675,7 +675,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="notselected">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)|round(2)) }}</td>
                                                     {% else %}
                                                         <td class="notselected">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -712,7 +712,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="stat">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)) }}</td>
+                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)) }}</td>
                                                     {% else %}
                                                         <td class="stat">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -720,7 +720,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="notselected">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)) }}</td>
+                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)) }}</td>
                                                     {% else %}
                                                         <td class="notselected">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -778,7 +778,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="stat">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)|round(2)) }}</td>
                                                     {% else %}
                                                         <td class="stat">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -786,7 +786,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="notselected">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)|round(2)) }}</td>
                                                     {% else %}
                                                         <td class="notselected">{{ PitchersStats["my"][ns.myPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -829,7 +829,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="stat">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)|round(2)) }}</td>
                                                     {% else %}
                                                         <td class="stat">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -837,7 +837,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="notselected">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)|round(2)) }}</td>
                                                     {% else %}
                                                         <td class="notselected">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -891,7 +891,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="stat">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                        <td class="stat">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)|round(2)) }}</td>
                                                     {% else %}
                                                         <td class="stat">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}
@@ -899,7 +899,7 @@
                                                     {% if T_pitcher_category == "IP" %}
                                                         <td class="notselected">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% elif PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] | isinstance("float") %}
-                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.001)|round(2)) }}</td>
+                                                        <td class="notselected">{{ "{:.2f}".format((PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] + 0.0001)|round(2)) }}</td>
                                                     {% else %}
                                                         <td class="notselected">{{ PitchersStats["opp"][ns.oppPitcherIndex][PITCHER_CATEGORIES_TO_TODAY_CATEGORIES[T_pitcher_category]-3] }}</td>
                                                     {% endif %}

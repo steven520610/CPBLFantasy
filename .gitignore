@@ -6,4 +6,8 @@ __pycache__/
 msedgedriver
 .Rapp.history
 static/img/
-static/dynamic/.Rhistory
+static/css/bootstrap/
+static/js/bootstrap/
+static/js/.Rhistory
+static/js/socket.*
+templates/bootstrap.html

@@ -314,7 +314,7 @@ def crawl_live():
         driver = webdriver.Edge(service=Service("./msedgedriver"), options=options)
 
         # 先前往成績看板頁面，該頁面會直接列出今天的比賽。
-        driver.get("https://www.cpbl.com.tw/box/index?gameSno=203&year=2023&kindCode=A")
+        driver.get("https://www.cpbl.com.tw/box")
         game_list = driver.find_element(By.CLASS_NAME, "game_list")
         number_of_games = len(game_list.find_elements(By.CLASS_NAME, "item"))
 

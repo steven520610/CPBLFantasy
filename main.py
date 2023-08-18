@@ -2065,13 +2065,18 @@ def todayupdate():
                             )
                             connection.execute(updateStmt)
 
-                # seasonUpdate()
+                seasonUpdate()
                 weeklyUpdate()
             return "更新完成！"
         else:
             return "更新失敗。"
     else:
         return render_template("todayupdate.html")
+
+
+@app.route("/bootstrap", methods=["GET"])
+def bootstrap():
+    return render_template("bootstrap.html")
 
 
 # 主程式

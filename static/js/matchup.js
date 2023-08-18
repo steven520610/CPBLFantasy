@@ -200,7 +200,7 @@ $(document).ready(function () {
     // dateString = dateString.slice(0, 10);
     $("#dateBar h1").text(dateString);
 
-    const socket = io("http://localhost:5000/matchup");
+    const socket = io("http://127.0.0.1:5000/matchup");
     socket.on("connect", function () {
         console.log("Connect!");
     });
@@ -283,6 +283,10 @@ $(document).ready(function () {
 
 
     // ------------------------------------以上為全域變數------------------------------------
+    function addBench() {
+        $(".bench").parent().addClass("bench");
+    }
+    addBench()
     function Loading() {
 
         function calculateTotalLoading() {
@@ -310,25 +314,28 @@ $(document).ready(function () {
                 else if ($(this).children().eq(0).text() == "Totals") {
                     return false;
                 }
-                // 自己有資料，對手有資料
-                else if ($(this).children().eq(1).text() != "-/-" && $(this).children().eq(26).text() == "-/-") {
-                    for (let i = 0; i < cateTotalFielderMy.length; i++) {
-                        hasValueFielderMy = true;
-                        cateTotalFielderMy[i] += Number($(this).children().eq(i + 2).text());
+
+                if (!$(this).hasClass("bench")) {
+                    // 自己有資料，對手有資料
+                    if ($(this).children().eq(1).text() != "-/-" && $(this).children().eq(26).text() == "-/-") {
+                        for (let i = 0; i < cateTotalFielderMy.length; i++) {
+                            hasValueFielderMy = true;
+                            cateTotalFielderMy[i] += Number($(this).children().eq(i + 2).text());
+                        }
                     }
-                }
-                else if ($(this).children().eq(1).text() == "-/-" && $(this).children().eq(26).text() != "-/-") {
-                    for (let i = 0; i < cateTotalFielderOpp.length; i++) {
-                        hasValueFielderOpp = true;
-                        cateTotalFielderOpp[i] += Number($(this).children().eq(i + 27).text());
+                    else if ($(this).children().eq(1).text() == "-/-" && $(this).children().eq(26).text() != "-/-") {
+                        for (let i = 0; i < cateTotalFielderOpp.length; i++) {
+                            hasValueFielderOpp = true;
+                            cateTotalFielderOpp[i] += Number($(this).children().eq(i + 27).text());
+                        }
                     }
-                }
-                else {
-                    for (let i = 0; i < cateTotalFielderMy.length; i++) {
-                        hasValueFielderMy = true;
-                        hasValueFielderOpp = true;
-                        cateTotalFielderMy[i] += Number($(this).children().eq(i + 2).text());
-                        cateTotalFielderOpp[i] += Number($(this).children().eq(i + 27).text());
+                    else {
+                        for (let i = 0; i < cateTotalFielderMy.length; i++) {
+                            hasValueFielderMy = true;
+                            hasValueFielderOpp = true;
+                            cateTotalFielderMy[i] += Number($(this).children().eq(i + 2).text());
+                            cateTotalFielderOpp[i] += Number($(this).children().eq(i + 27).text());
+                        }
                     }
                 }
             });
@@ -350,63 +357,65 @@ $(document).ready(function () {
                 else if ($(this).children().eq(1).text() == "Totals") {
                     return false;
                 }
-                else if ($(this).children().eq(1).text() != "-" && $(this).children().eq(21).text() == "-") {
-                    hasValuePitcherMy = true;
-                    for (let i = 0; i < cateTotalPitcherMy.length; i++) {
-                        // IP要例外處理，因為有進位問題
-                        if (i == 0) {
-                            cateTotalPitcherMy[i] += Number($(this).children().eq(i + 1).text());
-                            cateTotalPitcherMy[i] = convertIP(cateTotalPitcherMy[i], "Trinary");
-                        }
-                        // ERA, WHIP, K9之前的比項
-                        else if (i < 10) {
-                            cateTotalPitcherMy[i] += Number($(this).children().eq(i + 1).text());
-                        }
-                        // ERA, WHIP, K9之後的比項
-                        else {
-                            cateTotalPitcherMy[i] += Number($(this).children().eq(i + 4).text());
-                        }
-                    }
-                }
-                else if ($(this).children().eq(1).text() == "-" && $(this).children().eq(21).text() != "-") {
-                    hasValuePitcherOpp = true;
-                    for (let i = 0; i < cateTotalPitcherOpp.length; i++) {
-                        // IP要例外處理，因為有進位問題
-                        if (i == 0) {
-                            cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 21).text());
-                            cateTotalPitcherOpp[i] = convertIP(cateTotalPitcherOpp[i], "Trinary");
-                        }
-                        // ERA, WHIP, K9之前的比項
-                        else if (i < 10) {
-                            cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 21).text());
-                        }
-                        // ERA, WHIP, K9之後的比項
-                        else {
-                            cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 24).text());
-                        }
-                    }
-                }
-                else {
-                    for (let i = 0; i < cateTotalPitcherMy.length; i++) {
+                if (!$(this).hasClass("bench")) {
+                    if ($(this).children().eq(1).text() != "-" && $(this).children().eq(21).text() == "-") {
                         hasValuePitcherMy = true;
-                        hasValuePitcherOpp = true
-                        // IP要例外處理，因為有進位問題
-                        if (i == 0) {
-                            cateTotalPitcherMy[i] += Number($(this).children().eq(i + 1).text());
-                            cateTotalPitcherMy[i] = convertIP(cateTotalPitcherMy[i], "Trinary");
+                        for (let i = 0; i < cateTotalPitcherMy.length; i++) {
+                            // IP要例外處理，因為有進位問題
+                            if (i == 0) {
+                                cateTotalPitcherMy[i] += Number($(this).children().eq(i + 1).text());
+                                cateTotalPitcherMy[i] = convertIP(cateTotalPitcherMy[i], "Trinary");
+                            }
+                            // ERA, WHIP, K9之前的比項
+                            else if (i < 10) {
+                                cateTotalPitcherMy[i] += Number($(this).children().eq(i + 1).text());
+                            }
+                            // ERA, WHIP, K9之後的比項
+                            else {
+                                cateTotalPitcherMy[i] += Number($(this).children().eq(i + 4).text());
+                            }
+                        }
+                    }
+                    else if ($(this).children().eq(1).text() == "-" && $(this).children().eq(21).text() != "-") {
+                        hasValuePitcherOpp = true;
+                        for (let i = 0; i < cateTotalPitcherOpp.length; i++) {
+                            // IP要例外處理，因為有進位問題
+                            if (i == 0) {
+                                cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 21).text());
+                                cateTotalPitcherOpp[i] = convertIP(cateTotalPitcherOpp[i], "Trinary");
+                            }
+                            // ERA, WHIP, K9之前的比項
+                            else if (i < 10) {
+                                cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 21).text());
+                            }
+                            // ERA, WHIP, K9之後的比項
+                            else {
+                                cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 24).text());
+                            }
+                        }
+                    }
+                    else {
+                        for (let i = 0; i < cateTotalPitcherMy.length; i++) {
+                            hasValuePitcherMy = true;
+                            hasValuePitcherOpp = true
+                            // IP要例外處理，因為有進位問題
+                            if (i == 0) {
+                                cateTotalPitcherMy[i] += Number($(this).children().eq(i + 1).text());
+                                cateTotalPitcherMy[i] = convertIP(cateTotalPitcherMy[i], "Trinary");
 
-                            cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 21).text());
-                            cateTotalPitcherOpp[i] = convertIP(cateTotalPitcherOpp[i], "Trinary");
-                        }
-                        // ERA, WHIP, K9之前的比項
-                        else if (i < 10) {
-                            cateTotalPitcherMy[i] += Number($(this).children().eq(i + 1).text());
-                            cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 21).text());
-                        }
-                        // ERA, WHIP, K9之後的比項
-                        else {
-                            cateTotalPitcherMy[i] += Number($(this).children().eq(i + 4).text());
-                            cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 24).text());
+                                cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 21).text());
+                                cateTotalPitcherOpp[i] = convertIP(cateTotalPitcherOpp[i], "Trinary");
+                            }
+                            // ERA, WHIP, K9之前的比項
+                            else if (i < 10) {
+                                cateTotalPitcherMy[i] += Number($(this).children().eq(i + 1).text());
+                                cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 21).text());
+                            }
+                            // ERA, WHIP, K9之後的比項
+                            else {
+                                cateTotalPitcherMy[i] += Number($(this).children().eq(i + 4).text());
+                                cateTotalPitcherOpp[i] += Number($(this).children().eq(i + 24).text());
+                            }
                         }
                     }
                 }
@@ -803,8 +812,10 @@ $(document).ready(function () {
                     // 0不會執行這邊，共有18個
                     if (i < 19) {
                         if (difference != 0) {
-                            valueArray[i - 1] += difference;
-                            weeklyArray[i - 1] += difference
+                            if (!current.parent().hasClass("bench")) {
+                                valueArray[i - 1] += difference;
+                                weeklyArray[i - 1] += difference
+                            }
                         }
                     }
                 }
@@ -842,11 +853,13 @@ $(document).ready(function () {
                     // 加總IP Total
                     let int = parseInt(difference);
                     let decimal = parseFloat(difference) - int;
-                    valueArray[i] += int + decimal;
-                    valueArray[i] = convertIP(valueArray[i], "Trinary");
 
-                    weeklyArray[i + 18] += int + decimal;
-                    weeklyArray[i + 18] = convertIP(weeklyArray[i + 18], "Trinary");
+                    if (!current.parent().hasClass("bench")) {
+                        valueArray[i] += int + decimal;
+                        valueArray[i] = convertIP(valueArray[i], "Trinary");
+                        weeklyArray[i + 18] += int + decimal;
+                        weeklyArray[i + 18] = convertIP(weeklyArray[i + 18], "Trinary");
+                    }
                     // 特效在此處處理
                     if (difference > 0) {
                         current.addClass("positive");
@@ -859,8 +872,10 @@ $(document).ready(function () {
                     newCate = element[i + 3];
                     difference = newCate - oldCate;
 
-                    valueArray[i] += difference;
-                    weeklyArray[i + 18] += difference;
+                    if (!current.parent().hasClass("bench")) {
+                        valueArray[i] += difference;
+                        weeklyArray[i + 18] += difference;
+                    }
                     // 特效
                     if (difference > 0) {
                         // W, K, QS, HLD, SV, SV_H
@@ -889,7 +904,9 @@ $(document).ready(function () {
 
                     if (element[i + 3] > 1000) {
                         newCate = "INF";
-                        current.addClass("negative");
+                        if (!current.hasClass("negative")) {
+                            current.addClass("negative");
+                        }
                     }
 
                     else {
@@ -932,8 +949,10 @@ $(document).ready(function () {
                     newCate = element[i + 3];
                     difference = newCate - oldCate;
 
-                    valueArray[i - 3] += difference;
-                    weeklyArray[i + 15] += difference;
+                    if (!current.parent().hasClass("bench")) {
+                        valueArray[i - 3] += difference;
+                        weeklyArray[i + 15] += difference;
+                    }
                     // 特效
                     if (difference > 0) {
                         // QS, HLD, SV, SV_H
@@ -1335,7 +1354,7 @@ $(document).ready(function () {
                     }
                 }
                 // W, K
-                else if (i == 21 || i == 26) {
+                else if (i == 20 || i == 26) {
                     if (valueArray[i - 1] - valueArrayOld[i - 1] > 0) {
                         element.children().eq(i + 5).addClass("positive");
                     }

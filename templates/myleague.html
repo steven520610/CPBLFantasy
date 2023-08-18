@@ -8,13 +8,14 @@
             display: flex;
         }
     </style>
-    <script src={{ url_for("static", filename="dynamic/jQuery.js") }}></script>
+    <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
+    <script src={{ url_for("static", filename="js/jQuery.js") }}></script>
     <script>
         $(document).ready(function() {
-            $("button").mouseenter(function() {
+            $("#time").mouseenter(function() {
                 $("#date").text(Date());
             });
-            $("button").mouseleave(function() {
+            $("#time").mouseleave(function() {
                 $("#date").text("");
             });
         });
@@ -22,25 +23,31 @@
 </head>
 
 <body>
-    <h1>歡迎登入Fantasy Baseball  <button class="time">游標移動至此以顯示時間</button></h1>
+    <h1 class="text-primary bg-warning">歡迎登入Fantasy Baseball  <button id="time">游標移動至此以顯示時間</button></h1>
     <h2 id="date"></h2>
-    <h3>您的帳號是: {{ account }}, 您支持的球隊為:{{ team }}</h3>
+    <h3 class="text-primary">您的帳號是: {{ account }}, 您支持的球隊為:{{ team }}</h3>
 
-    <div id="buttonbar">
-        <form action={{ url_for("player") }} method="POST">
-            <input type="hidden" name="account" value={{ account }}>
-            <input type="submit" value="My Team">
-        </form>
-
-        <form action={{ url_for("matchup") }} method="POST">
-            <input type="hidden" name="account" value={{ account }}>
-            <input type="submit" value="Matchup">
-        </form>
-
-        <form action={{ url_for("draft") }} method="POST">
-            <input type="hidden" name="account" value={{ account }}>
-            <input type="submit" class="join" value="Draft">
-        </form>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 bg-danger">
+                <form action={{ url_for("player") }} method="POST">
+                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="submit" class="btn btn-primary" value="My Team"></button>
+                </form>
+            </div>
+            <div class="col-md-4 bg-warning">
+                <form action={{ url_for("matchup") }} method="POST">
+                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="submit" class="btn btn-success" value="Matchup"></button>
+                </form>
+            </div>
+            <div class="col-md-4 bg-info">
+                <form action={{ url_for("draft") }} method="POST">
+                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="submit" class="btn btn-dark" value="Draft"></button>
+                </form>
+            </div>
+        </div>
     </div>
 
 
