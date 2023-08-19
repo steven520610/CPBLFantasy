@@ -24,6 +24,9 @@ $(document).ready(function () {
         if (value >= 1) {
             element.children().eq(index).text(value.toFixed(3));
         }
+        else if (isNaN(value)) {
+            element.children().eq(index).text(".000");
+        }
         else {
             element.children().eq(index).text(value.toFixed(3).slice(1));
         }
