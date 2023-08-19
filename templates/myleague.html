@@ -9,23 +9,16 @@
         }
     </style>
     <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
-    <script src={{ url_for("static", filename="js/jQuery.js") }}></script>
-    <script>
-        $(document).ready(function() {
-            $("#time").mouseenter(function() {
-                $("#date").text(Date());
-            });
-            $("#time").mouseleave(function() {
-                $("#date").text("");
-            });
-        });
-    </script>
 </head>
 
 <body>
-    <h1 class="text-primary bg-warning">歡迎登入Fantasy Baseball  <button id="time">游標移動至此以顯示時間</button></h1>
-    <h2 id="date"></h2>
-    <h3 class="text-primary">您的帳號是: {{ account }}, 您支持的球隊為:{{ team }}</h3>
+    <div id="app">
+        <h1 class="text-primary bg-warning">歡迎登入Fantasy Baseball
+            <button id="time" @mouseover="updateTime" @mouseleave="clearTime">游標移動至此以顯示時間</button>
+        </h1>
+        <h2 id="date" v-if="showText">[[ currentTime ]]</h2>
+        <h3 class="text-primary">您的帳號是: {{ account }}, 您支持的球隊為:{{ team }}</h3>
+    </div>
 
     <div class="container">
         <div class="row">
@@ -49,8 +42,9 @@
             </div>
         </div>
     </div>
-
-
+    <script src={{ url_for("static", filename="js/jQuery.js") }}></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script type="module" src={{ url_for("static", filename="js/myleague.js") }}></script>
 </body>
 
 </html>
