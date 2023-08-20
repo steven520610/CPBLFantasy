@@ -1822,7 +1822,7 @@ def todayupdate():
                                 if WeeklyColumn["name"] in ["id", "account"]:
                                     continue
                                 todayTotal[WeeklyColumn["name"]] = 0
-
+                            print(Account.account)
                             # 先加入Fielder比項
                             for i in range(len(FieldersResult)):
                                 # 因為有今日成績的球員，並沒有紀錄該球員所屬的Account
@@ -1848,6 +1848,23 @@ def todayupdate():
                                 # 於是會跳過這些沒人選的球員
                                 SelectFielder = result.fetchone()
                                 if not SelectFielder:
+                                    continue
+                                # 接下來要判斷選到的球員，是否被放在BN
+                                # 不是的話就會跳過
+                                index = 0
+                                # 確認選到的球員被放在rearrange的位置
+                                for fielder in rearrangeDict[Account.account][
+                                    "Fielders"
+                                ]:
+                                    if not fielder or SelectFielder[1] != int(
+                                        fielder.player_id
+                                    ):
+                                        index += 1
+                                    else:
+                                        break
+                                print(index)
+                                # 因為index 10之後都是BN格
+                                if index >= 10:
                                     continue
 
                                 # 有被選入到某個Account的球員
@@ -1876,7 +1893,7 @@ def todayupdate():
                                         + SelectFielder[j + 3]
                                     )
                                     j += 1
-
+                            print(todayTotal)
                             # 處理AVG, OBP, SLG, OPS
                             todayTotal["AVG"] = todayTotal["H"] / todayTotal["AB"]
                             todayTotal["OBP"] = (
@@ -1915,6 +1932,24 @@ def todayupdate():
                                 SelectPitcher = result.fetchone()
 
                                 if not SelectPitcher:
+                                    continue
+
+                                # 接下來要判斷選到的球員，是否被放在BN
+                                # 不是的話就會跳過
+                                index = 0
+                                # 確認選到的球員被放在rearrange的位置
+                                for pitcher in rearrangeDict[Account.account][
+                                    "Pitchers"
+                                ]:
+                                    if not pitcher or SelectPitcher[1] != int(
+                                        pitcher.player_id
+                                    ):
+                                        index += 1
+                                    else:
+                                        break
+                                print(index)
+                                # 因為index 10之後都是BN格
+                                if index >= 6:
                                     continue
 
                                 # 這邊用-1開始是因為
