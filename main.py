@@ -54,6 +54,7 @@ socketio = SocketIO(app, cors_allowed_origins="http://127.0.0.1:5000")
 # 在player路由中會使用到
 # 每個帳號會當作key，裡面包含了該帳號的rearrange, rearrangeQueryFielders, rearrangeQueryPitchers
 rearrangeDict = {}
+rearrange = False
 # 根據球員的position，決定該球員會在網頁的哪一列上，讓該球員會對應到守位格
 # 總共有20個格子 (16個正常守位 + 4個BN)
 positionDict = {
@@ -62,13 +63,8 @@ positionDict = {
     # 6
     "Pitcher": ["SP", "SP", "SP", "SP", "RP", "RP"],
 }
-# 處理要使用的資料表(table)
-
-# 定義映射類別(mapping class)
-# 來描述db table和Python class的關係
 
 
-# Account Table
 class Account(db.Model):
     # 若無設定，預設的table name會被轉成小寫的account
     __tablename__ = "Account"
@@ -314,7 +310,284 @@ class Pitcher(db.Model):
         # }
         return return_dict
 
+    # 一啟動或重啟server時，就先對每個帳號做排序
 
+
+# 一啟動或重啟server時，就先對每個帳號做排序
+# 然而因為是在server一起動就要處理，還沒有收到任何user端送來的請求
+# 也就是一啟動時，並不在任何的上下文(路由)中
+# 因此需要透過這個方法，手動建立一個上下文
+# 否則會報RunTime Error
+with app.app_context():
+
+    def rearrangePlayer(account):
+        # 從db的Fielder, Pitcher Table抓出此帳號所選的球員
+        queryFielders = (
+            db.session.query(Fielder).filter(Fielder.Account == account).all()
+        )
+        queryPitchers = (
+            db.session.query(Pitcher).filter(Pitcher.Account == account).all()
+        )
+
+        # 宣告有多個該守位的格子已被使用幾個、最多使用幾個
+        Used = {
+            "OF": {"Count": 0, "Limit": 4},
+            "SP": {"Count": 0, "Limit": 4},
+            "RP": {"Count": 0, "Limit": 2},
+        }
+
+        # Fielder
+        # 宣告一個用來存調整順序後的球員陣列
+        rearrangeQueryFielders = [False] * 10
+
+        # 先賦予每個球員 "是否已經被分配守位" 這個屬性
+        for queryFielder in queryFielders:
+            queryFielder.assignPosition = False
+
+        # 宣告當前取的fielder、守位、BN起始對應的索引值
+        fielderIndex = 0
+        positionIndex = 0
+
+        # 宣告決定程式流程的一些Bool變數，分別是：
+        # 決定所選球員內，是否擁有多守位的球員
+        # 決定排序時是否在第一輪(略過多守位球員的情況)
+        # 決定Util格子是否被任一球員使用
+        hasMultiPosition = False
+        firstRound = True
+        UtilUsed = False
+
+        while fielderIndex < len(queryFielders) or hasMultiPosition:
+            # 第一輪，先略過多守位球員
+            if firstRound:
+                # 多守位球員會以 ", " 被隔開多個守位
+                if len(queryFielders[fielderIndex].position.split(", ")) > 1:
+                    fielderIndex += 1
+                    hasMultiPosition = True
+                    # 最後一個球員被選到後就會重新開始while loop
+                    if fielderIndex == len(queryFielders):
+                        firstRound = False
+                        fielderIndex = 0
+                    continue
+                # 指定守位到對應格子
+
+                # 從第一個守位開始選起，遇到符合的守位，且該守位目前尚無人使用的話
+                # 就會跳出此回圈
+                for position in positionDict["Fielder"]:
+                    if queryFielders[fielderIndex].position == position:
+                        positionIndex = positionDict["Fielder"].index(position)
+
+                        # 遇到該守位有多個格子的情況
+                        if position in Used.keys():
+                            positionIndex += Used[position]["Count"]
+                            # 如果該多格子的守位尚未使用完的情況
+                            # 如果使用完的話就會往後，將此球員放到Util或BN
+                            if (
+                                positionIndex
+                                < positionDict["Fielder"].index(position)
+                                + Used[position]["Limit"]
+                            ):
+                                if not rearrangeQueryFielders[positionIndex]:
+                                    rearrangeQueryFielders[
+                                        positionIndex
+                                    ] = queryFielders[fielderIndex]
+                                    queryFielders[fielderIndex].assignPosition = True
+                                    Used[position]["Count"] += 1
+                                    break
+
+                        # 只有單一格子
+                        else:
+                            if not rearrangeQueryFielders[positionIndex]:
+                                rearrangeQueryFielders[positionIndex] = queryFielders[
+                                    fielderIndex
+                                ]
+                                queryFielders[fielderIndex].assignPosition = True
+                                break
+
+                # 在所有守位都檢查完或是該球員已經被分配到格子的情況
+                # Util所有球員都能放
+                if not queryFielders[fielderIndex].assignPosition and not UtilUsed:
+                    rearrangeQueryFielders[9] = queryFielders[fielderIndex]
+                    queryFielders[fielderIndex].assignPosition = True
+                    UtilUsed = True
+
+                # 所有守位(含Util)都判斷完，但該球員依舊沒有被分配到格子
+                # -> BN
+                if not queryFielders[fielderIndex].assignPosition:
+                    rearrangeQueryFielders.append(False)
+                    rearrangeQueryFielders[-1] = queryFielders[fielderIndex]
+                    queryFielders[fielderIndex].assignPosition = True
+
+                fielderIndex += 1
+                if fielderIndex == len(queryFielders):
+                    firstRound = False
+                    fielderIndex = 0
+
+            # 第二輪，開始分配多守位的球員
+            else:
+                hasMultiPosition = False
+                if not queryFielders[fielderIndex].assignPosition:
+                    # 用來跳出第一層for loop，也就是該球員的不同守位
+                    shouldBreak = False
+
+                    # 迭代該該球員的每個守位
+                    for playerPosition in queryFielders[fielderIndex].position.split(
+                        ", "
+                    ):
+                        # 這邊和上述大致相同了
+                        for position in positionDict["Fielder"]:
+                            if playerPosition == position:
+                                positionIndex = positionDict["Fielder"].index(position)
+                                if position in Used.keys():
+                                    positionIndex += Used[position]["Count"]
+
+                                if position in Used.keys():
+                                    if (
+                                        positionIndex
+                                        < positionDict["Fielder"].index(position)
+                                        + Used[position]["Limit"]
+                                    ):
+                                        if not rearrangeQueryFielders[positionIndex]:
+                                            rearrangeQueryFielders[
+                                                positionIndex
+                                            ] = queryFielders[fielderIndex]
+                                            queryFielders[
+                                                fielderIndex
+                                            ].assignPosition = True
+                                            Used[position]["Count"] += 1
+                                            shouldBreak = True
+                                            break
+                                if not rearrangeQueryFielders[positionIndex]:
+                                    rearrangeQueryFielders[
+                                        positionIndex
+                                    ] = queryFielders[fielderIndex]
+                                    queryFielders[fielderIndex].assignPosition = True
+                                    shouldBreak = True
+                                    break
+
+                        # 如果多守位的其中一個守位被成功分配
+                        # 就不用再看其他守位了
+                        if shouldBreak:
+                            break
+
+                    if not queryFielders[fielderIndex].assignPosition and not UtilUsed:
+                        rearrangeQueryFielders[9] = queryFielders[fielderIndex]
+                        queryFielders[fielderIndex].assignPosition = True
+                        UtilUsed = True
+
+                    if not queryFielders[fielderIndex].assignPosition:
+                        rearrangeQueryFielders.append(False)
+                        rearrangeQueryFielders[-1] = queryFielders[fielderIndex]
+                        queryFielders[fielderIndex].assignPosition = True
+
+                fielderIndex += 1
+
+        rearrangeDict[account]["Fielders"] = rearrangeQueryFielders
+
+        # Pitcher
+        rearrangeQueryPitchers = [False] * len(queryPitchers)
+        # 先賦予每個球員 "是否被分配守位" 這個屬性
+        for queryPitcher in queryPitchers:
+            queryPitcher.assignPosition = False
+        pitcherIndex = 0
+        positionIndex = 0
+        hasMultiPosition = False
+        firstRound = True
+        BNIndex = 6
+        while pitcherIndex < len(queryPitchers) or hasMultiPosition:
+            # 第一輪，先略過多守位球員
+            if firstRound:
+                if len(queryPitchers[pitcherIndex].position.split(", ")) > 1:
+                    pitcherIndex += 1
+                    hasMultiPosition = True
+                    if pitcherIndex == len(queryPitchers):
+                        firstRound = False
+                        pitcherIndex = 0
+                    continue
+                # 指定守位到對應格子
+                for position in positionDict["Pitcher"]:
+                    if queryPitchers[pitcherIndex].position == position:
+                        positionIndex = positionDict["Pitcher"].index(position)
+                        positionIndex += Used[position]["Count"]
+
+                        if (
+                            positionIndex
+                            < positionDict["Pitcher"].index(position)
+                            + Used[position]["Limit"]
+                            and not rearrangeQueryPitchers[positionIndex]
+                        ):
+                            rearrangeQueryPitchers[positionIndex] = queryPitchers[
+                                pitcherIndex
+                            ]
+                            queryPitchers[pitcherIndex].assignPosition = True
+                            Used[position]["Count"] += 1
+                            break
+
+                if not queryPitchers[pitcherIndex].assignPosition:
+                    rearrangeQueryPitchers[BNIndex] = queryPitchers[pitcherIndex]
+                    queryPitchers[pitcherIndex].assignPosition = True
+                    BNIndex += 1
+
+                pitcherIndex += 1
+                if pitcherIndex == len(queryPitchers):
+                    firstRound = False
+                    pitcherIndex = 0
+
+            else:
+                hasMultiPosition = False
+                if not queryPitchers[pitcherIndex].assignPosition:
+                    shouldBreak = False
+                    for playerPosition in queryPitchers[pitcherIndex].position.split(
+                        ", "
+                    ):
+                        for position in positionDict["Pitcher"]:
+                            if playerPosition == position:
+                                positionIndex = positionDict["Pitcher"].index(position)
+                                positionIndex += Used[position]
+
+                                if (
+                                    positionIndex
+                                    < positionDict["Pitcher"].index(position)
+                                    + Used[position]["Limit"]
+                                    and not rearrangeQueryPitchers[positionIndex]
+                                ):
+                                    rearrangeQueryPitchers[
+                                        positionIndex
+                                    ] = queryPitchers[pitcherIndex]
+                                    queryPitchers[pitcherIndex].assignPosition = True
+                                    Used[position]["Count"] += 1
+                                    shouldBreak = True
+                                    break
+
+                        if shouldBreak:
+                            break
+
+                    if not queryPitchers[pitcherIndex].assignPosition:
+                        rearrangeQueryPitchers[BNIndex] = queryPitchers[pitcherIndex]
+                        queryPitchers[pitcherIndex].assignPosition = True
+                        BNIndex += 1
+
+                pitcherIndex += 1
+
+        rearrangeDict[account]["Pitchers"] = rearrangeQueryPitchers
+
+    def rearrangeAll():
+        accountTable = Table("Account", metadata, autoload_with=engine)
+        with engine.begin() as connection:
+            query = select(accountTable).where(accountTable.c.account != "admin")
+            results = connection.execute(query)
+            accounts = results.fetchall()
+        for account in accounts:
+            rearrangeDict[account.account] = {}
+            rearrangePlayer(account.account)
+        global rearrange
+        rearrange = True
+
+    rearrangeAll()
+
+
+# ======
+# 所有路由
+# ======
 @app.route("/sql")
 def sql():
     db.create_all()
@@ -808,271 +1081,10 @@ def background_update():
             background_task.release()
 
 
-rearrange = False
-
-
-def rearrangeAll():
-    accountTable = Table("Account", metadata, autoload_with=engine)
-    with engine.begin() as connection:
-        query = select(accountTable).where(accountTable.c.account != "admin")
-        results = connection.execute(query)
-        accounts = results.fetchall()
-    for account in accounts:
-        rearrangeDict[account.account] = {}
-        rearrangePlayer(account.account)
-    global rearrange
-    rearrange = True
-
-
-def rearrangePlayer(account):
-    # 從db的Fielder, Pitcher Table抓出此帳號所選的球員
-    queryFielders = db.session.query(Fielder).filter(Fielder.Account == account).all()
-    queryPitchers = db.session.query(Pitcher).filter(Pitcher.Account == account).all()
-
-    # 宣告有多個該守位的格子已被使用幾個、最多使用幾個
-    Used = {
-        "OF": {"Count": 0, "Limit": 4},
-        "SP": {"Count": 0, "Limit": 4},
-        "RP": {"Count": 0, "Limit": 2},
-    }
-
-    # Fielder
-    # 宣告一個用來存調整順序後的球員陣列
-    rearrangeQueryFielders = [False] * 10
-
-    # 先賦予每個球員 "是否已經被分配守位" 這個屬性
-    for queryFielder in queryFielders:
-        queryFielder.assignPosition = False
-
-    # 宣告當前取的fielder、守位、BN起始對應的索引值
-    fielderIndex = 0
-    positionIndex = 0
-
-    # 宣告決定程式流程的一些Bool變數，分別是：
-    # 決定所選球員內，是否擁有多守位的球員
-    # 決定排序時是否在第一輪(略過多守位球員的情況)
-    # 決定Util格子是否被任一球員使用
-    hasMultiPosition = False
-    firstRound = True
-    UtilUsed = False
-
-    while fielderIndex < len(queryFielders) or hasMultiPosition:
-        # 第一輪，先略過多守位球員
-        if firstRound:
-            # 多守位球員會以 ", " 被隔開多個守位
-            if len(queryFielders[fielderIndex].position.split(", ")) > 1:
-                fielderIndex += 1
-                hasMultiPosition = True
-                # 最後一個球員被選到後就會重新開始while loop
-                if fielderIndex == len(queryFielders):
-                    firstRound = False
-                    fielderIndex = 0
-                continue
-            # 指定守位到對應格子
-
-            # 從第一個守位開始選起，遇到符合的守位，且該守位目前尚無人使用的話
-            # 就會跳出此回圈
-            for position in positionDict["Fielder"]:
-                if queryFielders[fielderIndex].position == position:
-                    positionIndex = positionDict["Fielder"].index(position)
-
-                    # 遇到該守位有多個格子的情況
-                    if position in Used.keys():
-                        positionIndex += Used[position]["Count"]
-                        # 如果該多格子的守位尚未使用完的情況
-                        # 如果使用完的話就會往後，將此球員放到Util或BN
-                        if (
-                            positionIndex
-                            < positionDict["Fielder"].index(position)
-                            + Used[position]["Limit"]
-                        ):
-                            if not rearrangeQueryFielders[positionIndex]:
-                                rearrangeQueryFielders[positionIndex] = queryFielders[
-                                    fielderIndex
-                                ]
-                                queryFielders[fielderIndex].assignPosition = True
-                                Used[position]["Count"] += 1
-                                break
-
-                    # 只有單一格子
-                    else:
-                        if not rearrangeQueryFielders[positionIndex]:
-                            rearrangeQueryFielders[positionIndex] = queryFielders[
-                                fielderIndex
-                            ]
-                            queryFielders[fielderIndex].assignPosition = True
-                            break
-
-            # 在所有守位都檢查完或是該球員已經被分配到格子的情況
-            # Util所有球員都能放
-            if not queryFielders[fielderIndex].assignPosition and not UtilUsed:
-                rearrangeQueryFielders[9] = queryFielders[fielderIndex]
-                queryFielders[fielderIndex].assignPosition = True
-                UtilUsed = True
-
-            # 所有守位(含Util)都判斷完，但該球員依舊沒有被分配到格子
-            # -> BN
-            if not queryFielders[fielderIndex].assignPosition:
-                rearrangeQueryFielders.append(False)
-                rearrangeQueryFielders[-1] = queryFielders[fielderIndex]
-                queryFielders[fielderIndex].assignPosition = True
-
-            fielderIndex += 1
-            if fielderIndex == len(queryFielders):
-                firstRound = False
-                fielderIndex = 0
-
-        # 第二輪，開始分配多守位的球員
-        else:
-            hasMultiPosition = False
-            if not queryFielders[fielderIndex].assignPosition:
-                # 用來跳出第一層for loop，也就是該球員的不同守位
-                shouldBreak = False
-
-                # 迭代該該球員的每個守位
-                for playerPosition in queryFielders[fielderIndex].position.split(", "):
-                    # 這邊和上述大致相同了
-                    for position in positionDict["Fielder"]:
-                        if playerPosition == position:
-                            positionIndex = positionDict["Fielder"].index(position)
-                            if position in Used.keys():
-                                positionIndex += Used[position]["Count"]
-
-                            if position in Used.keys():
-                                if (
-                                    positionIndex
-                                    < positionDict["Fielder"].index(position)
-                                    + Used[position]["Limit"]
-                                ):
-                                    if not rearrangeQueryFielders[positionIndex]:
-                                        rearrangeQueryFielders[
-                                            positionIndex
-                                        ] = queryFielders[fielderIndex]
-                                        queryFielders[
-                                            fielderIndex
-                                        ].assignPosition = True
-                                        Used[position]["Count"] += 1
-                                        shouldBreak = True
-                                        break
-                            if not rearrangeQueryFielders[positionIndex]:
-                                rearrangeQueryFielders[positionIndex] = queryFielders[
-                                    fielderIndex
-                                ]
-                                queryFielders[fielderIndex].assignPosition = True
-                                shouldBreak = True
-                                break
-
-                    # 如果多守位的其中一個守位被成功分配
-                    # 就不用再看其他守位了
-                    if shouldBreak:
-                        break
-
-                if not queryFielders[fielderIndex].assignPosition and not UtilUsed:
-                    rearrangeQueryFielders[9] = queryFielders[fielderIndex]
-                    queryFielders[fielderIndex].assignPosition = True
-                    UtilUsed = True
-
-                if not queryFielders[fielderIndex].assignPosition:
-                    rearrangeQueryFielders.append(False)
-                    rearrangeQueryFielders[-1] = queryFielders[fielderIndex]
-                    queryFielders[fielderIndex].assignPosition = True
-
-            fielderIndex += 1
-
-    rearrangeDict[account]["Fielders"] = rearrangeQueryFielders
-
-    # Pitcher
-    rearrangeQueryPitchers = [False] * len(queryPitchers)
-    # 先賦予每個球員 "是否被分配守位" 這個屬性
-    for queryPitcher in queryPitchers:
-        queryPitcher.assignPosition = False
-    pitcherIndex = 0
-    positionIndex = 0
-    hasMultiPosition = False
-    firstRound = True
-    BNIndex = 6
-    while pitcherIndex < len(queryPitchers) or hasMultiPosition:
-        # 第一輪，先略過多守位球員
-        if firstRound:
-            if len(queryPitchers[pitcherIndex].position.split(", ")) > 1:
-                pitcherIndex += 1
-                hasMultiPosition = True
-                if pitcherIndex == len(queryPitchers):
-                    firstRound = False
-                    pitcherIndex = 0
-                continue
-            # 指定守位到對應格子
-            for position in positionDict["Pitcher"]:
-                if queryPitchers[pitcherIndex].position == position:
-                    positionIndex = positionDict["Pitcher"].index(position)
-                    positionIndex += Used[position]["Count"]
-
-                    if (
-                        positionIndex
-                        < positionDict["Pitcher"].index(position)
-                        + Used[position]["Limit"]
-                        and not rearrangeQueryPitchers[positionIndex]
-                    ):
-                        rearrangeQueryPitchers[positionIndex] = queryPitchers[
-                            pitcherIndex
-                        ]
-                        queryPitchers[pitcherIndex].assignPosition = True
-                        Used[position]["Count"] += 1
-                        break
-
-            if not queryPitchers[pitcherIndex].assignPosition:
-                rearrangeQueryPitchers[BNIndex] = queryPitchers[pitcherIndex]
-                queryPitchers[pitcherIndex].assignPosition = True
-                BNIndex += 1
-
-            pitcherIndex += 1
-            if pitcherIndex == len(queryPitchers):
-                firstRound = False
-                pitcherIndex = 0
-
-        else:
-            hasMultiPosition = False
-            if not queryPitchers[pitcherIndex].assignPosition:
-                shouldBreak = False
-                for playerPosition in queryPitchers[pitcherIndex].position.split(", "):
-                    for position in positionDict["Pitcher"]:
-                        if playerPosition == position:
-                            positionIndex = positionDict["Pitcher"].index(position)
-                            positionIndex += Used[position]
-
-                            if (
-                                positionIndex
-                                < positionDict["Pitcher"].index(position)
-                                + Used[position]["Limit"]
-                                and not rearrangeQueryPitchers[positionIndex]
-                            ):
-                                rearrangeQueryPitchers[positionIndex] = queryPitchers[
-                                    pitcherIndex
-                                ]
-                                queryPitchers[pitcherIndex].assignPosition = True
-                                Used[position]["Count"] += 1
-                                shouldBreak = True
-                                break
-
-                    if shouldBreak:
-                        break
-
-                if not queryPitchers[pitcherIndex].assignPosition:
-                    rearrangeQueryPitchers[BNIndex] = queryPitchers[pitcherIndex]
-                    queryPitchers[pitcherIndex].assignPosition = True
-                    BNIndex += 1
-
-            pitcherIndex += 1
-
-    rearrangeDict[account]["Pitchers"] = rearrangeQueryPitchers
-
-
 # 球員頁面
 @app.route("/player", methods=["GET", "POST"])
 def player():
-    global rearrange, rearrangeDict
-    if not rearrange:
-        rearrangeAll()
+    global rearrangeDict
 
     account = request.form["account"]
     queryAccount = db.session.query(Account).filter(Account.account == account).first()
@@ -1230,9 +1242,8 @@ def matchup():
     account = query_account.account
     opponent = query_account.opponent
 
-    global rearrange, rearrangeDict
-    if not rearrange:
-        rearrangeAll()
+    global rearrangeDict
+
     # 所選的球員
     Fielders, Pitchers = {}, {}
 
