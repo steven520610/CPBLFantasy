@@ -14,6 +14,7 @@ from sqlalchemy import (
     select,
     update,
     insert,
+    delete,
     and_,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -1410,6 +1411,74 @@ def matchup_disconnect():
 # 把今日成績加入本週成績、球季成績
 @app.route("/todayupdate", methods=["GET", "POST"])
 def todayupdate():
+    # ==================
+    # 調整不能直接相加的比項
+    # ==================
+    def adjustUnadditive(type, processDict, shouldRound, isWeekly):
+        if type == "Fielders":
+            processDict["AVG"] = processDict["H"] / processDict["AB"]
+            processDict["OBP"] = (
+                processDict["H"]
+                + processDict["BB"]
+                + processDict["IBB"]
+                + processDict["HBP"]
+            ) / (
+                processDict["AB"]
+                + processDict["BB"]
+                + processDict["IBB"]
+                + processDict["HBP"]
+                + processDict["SF"]
+            )
+            processDict["SLG"] = processDict["TB"] / processDict["AB"]
+            processDict["OPS"] = processDict["OBP"] + processDict["SLG"]
+
+            if shouldRound:
+                processDict["AVG"] = round(processDict["AVG"], 3)
+                processDict["OBP"] = round(processDict["OBP"], 3)
+                processDict["SLG"] = round(processDict["SLG"], 3)
+                processDict["OPS"] = round(processDict["OPS"], 3)
+
+        elif type == "Pitchers":
+            try:
+                # 把三進位的局數轉成十進位，才可以計算
+                IP_decimal = (
+                    int(processDict["IP"])
+                    + (processDict["IP"] - int(processDict["IP"])) * 10 * 3**-1
+                )
+
+                # 加這個條件是因為WeeklyStats Table把Fielder, Pitcher混在一起
+                # 所以會有重複名稱的欄位(ex:都有H, K, BB, ...)
+                # 但是Today的話會分開，因此不會有這個問題
+
+                if isWeekly:
+                    processDict["ERA"] = processDict["ER"] * 9 / IP_decimal
+                    processDict["WHIP"] = (
+                        processDict["H_P"] + processDict["BB_P"]
+                    ) / IP_decimal
+                    processDict["K9"] = processDict["K_P"] * 9 / IP_decimal
+                else:
+                    processDict["ERA"] = processDict["ER"] * 9 / IP_decimal
+                    processDict["WHIP"] = (
+                        processDict["H"] + processDict["BB"]
+                    ) / IP_decimal
+                    processDict["K/9"] = processDict["K"] * 9 / IP_decimal
+
+                if shouldRound:
+                    processDict["ERA"] = round(processDict["ERA"], 2)
+                    processDict["WHIP"] = round(processDict["WHIP"], 2)
+                    if isWeekly:
+                        processDict["K9"] = round(processDict["K9"], 2)
+                    else:
+                        processDict["K/9"] = round(processDict["K/9"], 2)
+
+            except ZeroDivisionError:
+                processDict["ERA"] = 0
+                processDict["WHIP"] = 0
+                if isWeekly:
+                    processDict["K9"] = 0
+                else:
+                    processDict["K/9"] = 0
+
     if request.method == "POST":
         if request.form.get("confirmed", False):
             fielders = Table("Fielder", metadata, autoload_with=engine)
@@ -1422,166 +1491,65 @@ def todayupdate():
             weeklyStats = Table("WeeklyStats", metadata, autoload_with=engine)
 
             with engine.begin() as connection:
-                Fielders = select(todayfielders)
-                results = connection.execute(Fielders)
-                FieldersResult = results.fetchall()
+                queryTodayFielders = select(todayfielders)
+                results = connection.execute(queryTodayFielders)
+                todayFieldersResult = results.fetchall()
 
-                query_todayPitchers = select(todaypitchers)
-                results = connection.execute(query_todayPitchers)
-                PitchersResult = results.fetchall()
+                queryTodayPitchers = select(todaypitchers)
+                results = connection.execute(queryTodayPitchers)
+                todayPitchersResult = results.fetchall()
 
                 inspector = inspect(engine)
                 tableExist = inspector.get_table_names()
 
+                # 先抓出所有table的欄位，以便後續使用
+                todayFielderColumns = inspector.get_columns("TodayFielder")
+                todayPitcherColumns = inspector.get_columns("TodayPitcher")
+
+                # ==========
                 # 更新本季成績
-                def seasonUpdate():
-                    # Fielder
-                    # 取出今日成績的Table
-                    for i in range(len(FieldersResult)):
+                # ==========
+                def seasonUpdate(type, todayPlayersResult, players):
+                    for i in range(len(todayPlayersResult)):
                         # 取出球員對應到的球季成績
-                        # FielderResult[i][1] : 今日成績內的某一個球員的player_id
-                        query_season = select(fielders).where(
-                            fielders.c.player_id == FieldersResult[i][1]
+                        query_season = select(players).where(
+                            players.c.player_id == todayPlayersResult[i][1]
                         )
                         result = connection.execute(query_season)
-                        SelectFielder = result.fetchone()
+                        SelectPlayer = result.fetchone()
 
-                        # 有可能是本季初登場
-                        # 所以球季成績可能還沒有此球員的資料
-                        # 如果有的話就用update
-                        # 沒有就把今日成績新增到球季成績
+                        processDict = {}
 
-                        # 更新
-                        if SelectFielder:
-                            # 存放要更新球季成績的字典
-                            update_dict = {}
+                        if not SelectPlayer:
+                            # 加入非stats的欄位
+                            processDict["player_id"] = todayPlayersResult[i][1]
+                            processDict["name"] = todayPlayersResult[i][2]
 
-                            # 本季成績 + 今日成績 -> 新的本季成績
+                            # 因為今日成績沒有隊伍資訊，所以先用TBD，之後再去DB內修改
+                            processDict["team"] = "TBD"
+
+                        # 本季成績 + 今日成績 -> 新的本季成績
+                        if type == "Fielders":
                             for (
                                 key,
                                 value,
                             ) in FIELDER_CATEGORIES_TO_TODAY_CATEGORIES.items():
                                 # AVG, OBP, SLB, OPS不能直接加
                                 if key not in ["AVG", "OBP", "SLG", "OPS"]:
-                                    update_dict[key] = (
-                                        getattr(SelectFielder, key)
-                                        + FieldersResult[i][value]
+                                    processDict[key] = (
+                                        getattr(SelectPlayer, key)
+                                        + todayPlayersResult[i][value]
                                     )
 
                             # 因為今日成績沒有一安，因此要額外計算
                             # 1H = H - 2H - 3H - HR
-                            update_dict["1H"] = getattr(SelectFielder, "1H") + (
-                                FieldersResult[i][7]
-                                - FieldersResult[i][8]
-                                - FieldersResult[i][9]
-                                - FieldersResult[i][10]
+                            processDict["1H"] = getattr(SelectPlayer, "1H") + (
+                                todayPlayersResult[i][7]
+                                - todayPlayersResult[i][8]
+                                - todayPlayersResult[i][9]
+                                - todayPlayersResult[i][10]
                             )
-                            # 計算球季AVG, OBP, SLG, OPS
-                            # 因為計算這四項整季的成績所需要的數據已經加到update_dict裡面了(加完今日)，所以可以直接用
-                            update_dict["AVG"] = round(
-                                update_dict["H"] / update_dict["AB"], 3
-                            )
-                            update_dict["OBP"] = round(
-                                (
-                                    update_dict["H"]
-                                    + update_dict["BB"]
-                                    + update_dict["IBB"]
-                                    + update_dict["HBP"]
-                                )
-                                / (
-                                    update_dict["AB"]
-                                    + update_dict["BB"]
-                                    + update_dict["IBB"]
-                                    + update_dict["HBP"]
-                                    + update_dict["SF"]
-                                ),
-                                3,
-                            )
-                            update_dict["SLG"] = round(
-                                update_dict["TB"] / update_dict["AB"], 3
-                            )
-                            update_dict["OPS"] = update_dict["OBP"] + update_dict["SLG"]
-
-                            # 更新
-                            update_stmt = (
-                                update(fielders)
-                                .where(fielders.c.player_id == FieldersResult[i][1])
-                                .values(update_dict)
-                            )
-                            connection.execute(update_stmt)
-
-                        # 新增
-                        else:
-                            # 存放新增球季成績的字典
-                            insert_dict = {}
-
-                            # 加入非stats的欄位
-                            insert_dict["player_id"] = FieldersResult[i][1]
-                            insert_dict["name"] = FieldersResult[i][2]
-
-                            # 因為今日成績沒有隊伍資訊，所以先用TBD，之後再去DB內修改
-                            insert_dict["team"] = "TBD"
-
-                            for (
-                                key,
-                                value,
-                            ) in FIELDER_CATEGORIES_TO_TODAY_CATEGORIES.items():
-                                # AVG, OBP, SLB, OPS不能直接加
-                                if key not in ["AVG", "OBP", "SLG", "OPS"]:
-                                    insert_dict[key] = FieldersResult[i][value]
-
-                            # 因為今日成績沒有一安，因此要額外計算
-                            # 1H = H - 2H - 3H - HR
-                            insert_dict["1H"] = (
-                                FieldersResult[i][7]
-                                - FieldersResult[i][8]
-                                - FieldersResult[i][9]
-                                - FieldersResult[i][10]
-                            )
-
-                            # 計算球季AVG, OBP, SLG, OPS
-                            # 因為計算這四項整季的成績所需要的數據已經加到update_dict裡面了(加完今日)，所以可以直接用
-                            insert_dict["AVG"] = round(
-                                insert_dict["H"] / insert_dict["AB"], 3
-                            )
-                            insert_dict["OBP"] = round(
-                                (
-                                    insert_dict["H"]
-                                    + insert_dict["BB"]
-                                    + insert_dict["IBB"]
-                                    + insert_dict["HBP"]
-                                )
-                                / (
-                                    insert_dict["AB"]
-                                    + insert_dict["BB"]
-                                    + insert_dict["IBB"]
-                                    + insert_dict["HBP"]
-                                    + insert_dict["SF"]
-                                ),
-                                3,
-                            )
-                            insert_dict["SLG"] = round(
-                                insert_dict["TB"] / insert_dict["AB"], 3
-                            )
-                            insert_dict["OPS"] = insert_dict["OBP"] + insert_dict["SLG"]
-
-                            # Account, position, round欄位可以為null，所以不需要設定
-                            insert_stmt = insert(fielders).values(insert_dict)
-                            connection.execute(insert_stmt)
-
-                    # Pitcher
-                    # 取出今日成績的Table
-
-                    for i in range(len(PitchersResult)):
-                        query_season = select(pitchers).where(
-                            pitchers.c.player_id == PitchersResult[i][1]
-                        )
-                        result = connection.execute(query_season)
-                        SelectPitcher = result.fetchone()
-
-                        if SelectPitcher:
-                            update_dict = {}
-
+                        elif type == "Pitchers":
                             for (
                                 key,
                                 value,
@@ -1589,116 +1557,46 @@ def todayupdate():
                                 if key == "IP":
                                     # 把局數加總的十進位轉成三進位
                                     IP_sum = (
-                                        getattr(SelectPitcher, key)
-                                        + PitchersResult[i][3]
+                                        getattr(SelectPlayer, key)
+                                        + todayPlayersResult[i][3]
                                     )
                                     integer = int(IP_sum)
                                     decimal = IP_sum - integer
                                     if decimal * 10 >= 3:
                                         integer += 1
                                         decimal -= 0.3
-                                    update_dict[key] = integer + decimal
-                                #
+                                    processDict[key] = integer + decimal
                                 elif key == "SV_H":
-                                    update_dict["SV+H"] = (
-                                        getattr(SelectPitcher, "SV+H")
-                                        + PitchersResult[i][value]
+                                    processDict["SV+H"] = (
+                                        getattr(SelectPlayer, "SV+H")
+                                        + todayPlayersResult[i][value]
                                     )
                                 elif key not in ["K9", "ERA", "WHIP"]:
-                                    update_dict[key] = (
-                                        getattr(SelectPitcher, key)
-                                        + PitchersResult[i][value]
+                                    processDict[key] = (
+                                        getattr(SelectPlayer, key)
+                                        + todayPlayersResult[i][value]
                                     )
 
                             # 因為今日成績沒有APP，但是有出現在今日成績就代表有出場
-                            update_dict["APP"] = getattr(SelectPitcher, "APP") + 1
+                            processDict["APP"] = getattr(SelectPlayer, "APP") + 1
 
-                            # ERA, WHIP, K9另外計算
-                            # 防止有投手本季成績為0.0
-                            try:
-                                # 把三進位的局數轉成十進位，才可以計算
-                                IP_decimal = (
-                                    int(update_dict["IP"])
-                                    + (update_dict["IP"] - int(update_dict["IP"]))
-                                    * 10
-                                    * 3**-1
-                                )
-                                update_dict["ERA"] = round(
-                                    update_dict["ER"] * 9 / IP_decimal, 2
-                                )
-                                update_dict["WHIP"] = round(
-                                    (update_dict["H"] + update_dict["BB"]) / IP_decimal,
-                                    2,
-                                )
-                                update_dict["K/9"] = round(
-                                    update_dict["K"] * 9 / IP_decimal, 2
-                                )
-                            except ZeroDivisionError:
-                                update_dict["ERA"] = 0
-                                update_dict["WHIP"] = 0
-                                update_dict["K/9"] = 0
+                        adjustUnadditive(type, processDict, True, False)
 
+                        if SelectPlayer:
                             update_stmt = (
-                                update(pitchers)
-                                .where(pitchers.c.player_id == PitchersResult[i][1])
-                                .values(update_dict)
+                                update(players)
+                                .where(players.c.player_id == todayPlayersResult[i][1])
+                                .values(processDict)
                             )
-
                             connection.execute(update_stmt)
-
                         else:
-                            insert_dict = {}
-
-                            # 加入非stats的欄位
-                            insert_dict["player_id"] = PitchersResult[i][1]
-                            insert_dict["name"] = PitchersResult[i][2]
-
-                            # 因為今日成績沒有隊伍資訊，所以先用TBD，之後再去DB內修改
-                            insert_dict["team"] = "TBD"
-
-                            for (
-                                key,
-                                value,
-                            ) in PITCHER_CATEGORIES_TO_TODAY_CATEGORIES.items():
-                                # 因為是新增的，IP不會有進位的問題，因此可以直接用Table的資料
-                                if key == "SV_H":
-                                    insert_dict["SV+H"] = PitchersResult[i][value]
-                                elif key not in ["K9", "ERA", "WHIP"]:
-                                    insert_dict[key] = PitchersResult[i][value]
-
-                            # 初登場，直接設定
-                            insert_dict["APP"] = 1
-
-                            # ERA, WHIP, K9另外計算
-                            # 防止有投手本季成績為0.0
-                            try:
-                                # 把三進位的局數轉成十進位，才可以計算
-                                IP_decimal = (
-                                    int(insert_dict["IP"])
-                                    + (insert_dict["IP"] - int(insert_dict["IP"]))
-                                    * 10
-                                    * 3**-1
-                                )
-                                insert_dict["ERA"] = round(
-                                    insert_dict["ER"] * 9 / IP_decimal, 2
-                                )
-                                insert_dict["WHIP"] = round(
-                                    (insert_dict["H"] + insert_dict["BB"]) / IP_decimal,
-                                    2,
-                                )
-                                insert_dict["K/9"] = round(
-                                    insert_dict["K"] * 9 / IP_decimal, 2
-                                )
-                            except ZeroDivisionError:
-                                insert_dict["ERA"] = 0
-                                insert_dict["WHIP"] = 0
-                                insert_dict["K/9"] = 0
-
                             # Account, position, round欄位可以為null，所以不需要設定
-                            insert_stmt = insert(pitchers).values(insert_dict)
+                            insert_stmt = insert(pitchers).values(processDict)
                             connection.execute(insert_stmt)
 
+                # ==========
                 # 更新當週成績
+                # ==========
                 def weeklyUpdate():
                     if "WeeklyStats" not in tableExist:
                         # 新增一個WeeklyStats Table
@@ -1771,9 +1669,159 @@ def todayupdate():
                         table = Table("WeeklyStats", metadata, *columns)
                         metadata.create_all(engine, [table])
 
-                    # 先抓出所有table的欄位，以便後續使用
-                    todayFielderColumns = inspector.get_columns("TodayFielder")
-                    todayPitcherColumns = inspector.get_columns("TodayPitcher")
+                    # =============================
+                    # 確認WeeklyStats Table內
+                    # 目前有無記載要查詢的account的成績
+                    # =============================
+                    def checkAccount(account):
+                        queryWeeklyStats = select(weeklyStats).where(
+                            weeklyStats.c.account == account
+                        )
+                        result = connection.execute(queryWeeklyStats)
+                        SelectAccount = result.fetchone()
+                        return SelectAccount
+
+                    # =========================
+                    # 依照傳入的Table、球員種類
+                    # 更新WeeklyStats Table的資料
+                    # =========================
+                    def updatePlayer(
+                        type,
+                        todayPlayersResult,
+                        todayplayers,
+                        todayPlayerColumns,
+                        players,
+                        todayTotal,
+                    ):
+                        for i in range(len(todayPlayersResult)):
+                            # 因為有今日成績的球員，並沒有紀錄該球員所屬的Account
+                            # 所以要利用join把有球員所屬的Account，也就是整季成績的Table給載進來
+                            # 利用兩者都有的player_id去join
+                            query = (
+                                select(todayplayers)
+                                .join(
+                                    players,
+                                    players.c.player_id == todayplayers.c.player_id,
+                                )
+                                .where(
+                                    and_(
+                                        todayplayers.c.player_id
+                                        == todayPlayersResult[i][1],
+                                        players.c.Account == Account.account,
+                                    )
+                                )
+                            )
+                            result = connection.execute(query)
+                            # 今日成績的所有球員都會被遍歷，但有些球員可能沒人選
+                            # 於是會跳過這些沒人選的球員
+                            SelectPlayer = result.fetchone()
+                            if not SelectPlayer:
+                                continue
+                            # 接下來要判斷選到的球員，是否被放在BN
+                            # 不是的話就會跳過
+                            index = 0
+                            # 確認選到的球員被放在rearrange的位置
+                            for player in rearrangeDict[Account.account][type]:
+                                if not player or SelectPlayer[1] != int(
+                                    player.player_id
+                                ):
+                                    index += 1
+                                else:
+                                    break
+
+                            # 野手和投手BN格子的索引不同
+                            if type == "Fielders":
+                                if index >= 10:
+                                    continue
+                            elif type == "Pitchers":
+                                if index >= 6:
+                                    continue
+
+                            # 有被選入到某個Account的球員
+                            # 因為回圈內有些地方會跳出，因此宣告一個取index的變數
+                            j = 0
+
+                            if type == "Fielders":
+                                for todayPlayerColumn in todayPlayerColumns:
+                                    # AVG, OBP, SLG, OPS這四個stats沒法直接加
+                                    # 後面再處理
+                                    if todayPlayerColumn["name"] in [
+                                        "db_id",
+                                        "player_id",
+                                        "name",
+                                        "AVG",
+                                        "OBP",
+                                        "SLG",
+                                        "OPS",
+                                    ]:
+                                        continue
+
+                                    # 可直接加的stats
+
+                                    # +3是因為todayPlayer的每一列中
+                                    # 前三個column分別為db_id, player_id, name
+                                    todayTotal[todayPlayerColumn["name"]] = (
+                                        todayTotal[todayPlayerColumn["name"]]
+                                        + SelectPlayer[j + 3]
+                                    )
+                                    j += 1
+
+                                # 處理AVG, OBP, SLG, OPS
+                                adjustUnadditive(type, todayTotal, True, True)
+
+                            elif type == "Pitchers":
+                                for todayPlayerColumn in todayPlayerColumns:
+                                    # ERA, WHIP, K9這三個比項不直接加
+                                    if todayPlayerColumn["name"] in [
+                                        "db_id",
+                                        "player_id",
+                                        "name",
+                                    ]:
+                                        continue
+
+                                    elif todayPlayerColumn["name"] in [
+                                        "ERA",
+                                        "WHIP",
+                                        "K9",
+                                    ]:
+                                        j += 1
+                                        continue
+
+                                    # **
+                                    # 這些欄位會和todayTotal，屬於打者的欄位名稱撞到
+                                    # 所以要加上_P
+                                    if todayPlayerColumn["name"] in [
+                                        "H",
+                                        "HR",
+                                        "BB",
+                                        "HBP",
+                                        "K",
+                                        "R",
+                                    ]:
+                                        todayTotal[todayPlayerColumn["name"] + "_P"] = (
+                                            todayTotal[todayPlayerColumn["name"] + "_P"]
+                                            + SelectPlayer[j + 3]
+                                        )
+                                    else:
+                                        todayTotal[todayPlayerColumn["name"]] = (
+                                            todayTotal[todayPlayerColumn["name"]]
+                                            + SelectPlayer[j + 3]
+                                        )
+                                    j += 1
+
+                                # IP因為進制的問題
+                                # 每個Pitcher跑完之後都要處理
+                                IP_sum = todayTotal["IP"]
+                                integer = int(IP_sum)
+                                decimal = IP_sum - integer
+                                if decimal * 10 >= 3:
+                                    integer += 1
+                                    decimal -= 0.3
+                                todayTotal["IP"] = integer + decimal
+
+                                # ERA, WHIP, K9另外計算
+                                # 防止有投手本季成績為0.0
+                                adjustUnadditive(type, todayTotal, True, True)
 
                     # 查詢db中的Account Table的所有帳號，
                     # 接下來會尋找每個帳號中，今天有成績的選手
@@ -1787,12 +1835,7 @@ def todayupdate():
                         if Account.account == "admin":
                             continue
 
-                        # 查詢此回圈中的帳號
-                        query_weekly = select(weeklyStats).where(
-                            weeklyStats.c.account == Account.account
-                        )
-                        result = connection.execute(query_weekly)
-                        SelectAccount = result.fetchone()
+                        SelectAccount = checkAccount(Account.account)
 
                         # 若目前還沒有此帳號的每週成績，則新增一個全部stats都為0的列
                         if not SelectAccount:
@@ -1810,7 +1853,6 @@ def todayupdate():
                             insertStmt = insert(weeklyStats).values(insertDict)
                             connection.execute(insertStmt)
 
-                        # 若有，就要取TodayFielder內，屬於此Account的選手了
                         else:
                             # 每天該帳號的加總stats都從0開始
                             # 接著會遍歷每個該帳號所屬的球員
@@ -1822,219 +1864,26 @@ def todayupdate():
                                 if WeeklyColumn["name"] in ["id", "account"]:
                                     continue
                                 todayTotal[WeeklyColumn["name"]] = 0
-                            print(Account.account)
-                            # 先加入Fielder比項
-                            for i in range(len(FieldersResult)):
-                                # 因為有今日成績的球員，並沒有紀錄該球員所屬的Account
-                                # 所以要利用join把有球員所屬的Account，也就是整季成績的Table給載進來
-                                # 利用兩者都有的player_id去join
-                                query = (
-                                    select(todayfielders)
-                                    .join(
-                                        fielders,
-                                        fielders.c.player_id
-                                        == todayfielders.c.player_id,
-                                    )
-                                    .where(
-                                        and_(
-                                            todayfielders.c.player_id
-                                            == FieldersResult[i][1],
-                                            fielders.c.Account == Account.account,
-                                        )
-                                    )
-                                )
-                                result = connection.execute(query)
-                                # 今日成績的所有球員都會被遍歷，但有些球員可能沒人選
-                                # 於是會跳過這些沒人選的球員
-                                SelectFielder = result.fetchone()
-                                if not SelectFielder:
-                                    continue
-                                # 接下來要判斷選到的球員，是否被放在BN
-                                # 不是的話就會跳過
-                                index = 0
-                                # 確認選到的球員被放在rearrange的位置
-                                for fielder in rearrangeDict[Account.account][
-                                    "Fielders"
-                                ]:
-                                    if not fielder or SelectFielder[1] != int(
-                                        fielder.player_id
-                                    ):
-                                        index += 1
-                                    else:
-                                        break
-                                print(index)
-                                # 因為index 10之後都是BN格
-                                if index >= 10:
-                                    continue
 
-                                # 有被選入到某個Account的球員
-                                # 因為回圈內有些地方會跳出，因此宣告一個取index的變數
-                                j = 0
-                                for todayFielderColumn in todayFielderColumns:
-                                    # AVG, OBP, SLG, OPS這四個stats沒法直接加
-                                    # 後面再處理
-                                    if todayFielderColumn["name"] in [
-                                        "db_id",
-                                        "player_id",
-                                        "name",
-                                        "AVG",
-                                        "OBP",
-                                        "SLG",
-                                        "OPS",
-                                    ]:
-                                        continue
-
-                                    # 可直接加的stats
-
-                                    # +3是因為todayFielder的每一列中
-                                    # 前三個column分別為db_id, player_id, name
-                                    todayTotal[todayFielderColumn["name"]] = (
-                                        todayTotal[todayFielderColumn["name"]]
-                                        + SelectFielder[j + 3]
-                                    )
-                                    j += 1
-                            print(todayTotal)
-                            # 處理AVG, OBP, SLG, OPS
-                            todayTotal["AVG"] = todayTotal["H"] / todayTotal["AB"]
-                            todayTotal["OBP"] = (
-                                todayTotal["H"]
-                                + todayTotal["BB"]
-                                + todayTotal["IBB"]
-                                + todayTotal["HBP"]
-                            ) / (
-                                todayTotal["AB"]
-                                + todayTotal["BB"]
-                                + todayTotal["IBB"]
-                                + todayTotal["HBP"]
-                                + todayTotal["SF"]
+                            updatePlayer(
+                                "Fielders",
+                                todayFieldersResult,
+                                todayfielders,
+                                todayFielderColumns,
+                                fielders,
+                                todayTotal,
                             )
-                            todayTotal["SLG"] = todayTotal["TB"] / todayTotal["AB"]
-                            todayTotal["OPS"] = todayTotal["OBP"] + todayTotal["SLG"]
 
-                            # 再加入Pitcher比項
-                            for i in range(len(PitchersResult)):
-                                query = (
-                                    select(todaypitchers)
-                                    .join(
-                                        pitchers,
-                                        pitchers.c.player_id
-                                        == todaypitchers.c.player_id,
-                                    )
-                                    .where(
-                                        and_(
-                                            todaypitchers.c.player_id
-                                            == PitchersResult[i][1],
-                                            pitchers.c.Account == Account.account,
-                                        )
-                                    )
-                                )
-                                result = connection.execute(query)
-                                SelectPitcher = result.fetchone()
-
-                                if not SelectPitcher:
-                                    continue
-
-                                # 接下來要判斷選到的球員，是否被放在BN
-                                # 不是的話就會跳過
-                                index = 0
-                                # 確認選到的球員被放在rearrange的位置
-                                for pitcher in rearrangeDict[Account.account][
-                                    "Pitchers"
-                                ]:
-                                    if not pitcher or SelectPitcher[1] != int(
-                                        pitcher.player_id
-                                    ):
-                                        index += 1
-                                    else:
-                                        break
-                                print(index)
-                                # 因為index 10之後都是BN格
-                                if index >= 6:
-                                    continue
-
-                                # 這邊用-1開始是因為
-                                j = 0
-                                for todayPitcherColumn in todayPitcherColumns:
-                                    # ERA, WHIP, K9這三個比項不直接加
-                                    if todayPitcherColumn["name"] in [
-                                        "db_id",
-                                        "player_id",
-                                        "name",
-                                    ]:
-                                        continue
-
-                                    elif todayPitcherColumn["name"] in [
-                                        "ERA",
-                                        "WHIP",
-                                        "K9",
-                                    ]:
-                                        j += 1
-                                        continue
-
-                                    # **
-                                    # 這些欄位會和todayTotal，屬於打者的欄位名稱撞到
-                                    # 所以要加上_P
-                                    if todayPitcherColumn["name"] in [
-                                        "H",
-                                        "HR",
-                                        "BB",
-                                        "HBP",
-                                        "K",
-                                        "R",
-                                    ]:
-                                        todayTotal[
-                                            todayPitcherColumn["name"] + "_P"
-                                        ] = (
-                                            todayTotal[
-                                                todayPitcherColumn["name"] + "_P"
-                                            ]
-                                            + SelectPitcher[j + 3]
-                                        )
-                                    else:
-                                        todayTotal[todayPitcherColumn["name"]] = (
-                                            todayTotal[todayPitcherColumn["name"]]
-                                            + SelectPitcher[j + 3]
-                                        )
-                                    j += 1
-
-                                # IP因為進制的問題
-                                # 每個Pitcher跑完之後都要處理
-                                IP_sum = todayTotal["IP"]
-                                integer = int(IP_sum)
-                                decimal = IP_sum - integer
-                                if decimal * 10 >= 3:
-                                    integer += 1
-                                    decimal -= 0.3
-                                todayTotal["IP"] = integer + decimal
-
-                            # ERA, WHIP, K9另外計算
-                            # 防止有投手本季成績為0.0
-                            try:
-                                # 把三進位的局數轉成十進位，才可以計算
-                                IP_decimal = (
-                                    int(todayTotal["IP"])
-                                    + (todayTotal["IP"] - int(todayTotal["IP"]))
-                                    * 10
-                                    * 3**-1
-                                )
-                                todayTotal["ERA"] = round(
-                                    todayTotal["ER"] * 9 / IP_decimal, 2
-                                )
-                                todayTotal["WHIP"] = round(
-                                    (todayTotal["H_P"] + todayTotal["BB_P"])
-                                    / IP_decimal,
-                                    2,
-                                )
-                                todayTotal["K9"] = round(
-                                    todayTotal["K_P"] * 9 / IP_decimal, 2
-                                )
-                            except ZeroDivisionError:
-                                todayTotal["ERA"] = 0
-                                todayTotal["WHIP"] = 0
-                                todayTotal["K9"] = 0
+                            updatePlayer(
+                                "Pitchers",
+                                todayPitchersResult,
+                                todaypitchers,
+                                todayPitcherColumns,
+                                pitchers,
+                                todayTotal,
+                            )
 
                             # 以上Account所有選擇的球員之stats都加總完成
-
                             # 再來還要把原本就在此Table內的數據 + 上今日的成績
                             # 當作最新的本週成績
                             for WeeklyColumn in WeeklyColumns:
@@ -2047,48 +1896,8 @@ def todayupdate():
 
                             # 因為這邊又把本日成績和本週原始成績做相加的動作
                             # 所以那些不能加的欄位要再重新計算一次
-                            # AVG, OBP, SLG, OPS
-                            todayTotal["AVG"] = todayTotal["H"] / todayTotal["AB"]
-                            todayTotal["OBP"] = (
-                                todayTotal["H"]
-                                + todayTotal["BB"]
-                                + todayTotal["IBB"]
-                                + todayTotal["HBP"]
-                            ) / (
-                                todayTotal["AB"]
-                                + todayTotal["BB"]
-                                + todayTotal["IBB"]
-                                + todayTotal["HBP"]
-                                + todayTotal["SF"]
-                            )
-                            todayTotal["SLG"] = todayTotal["TB"] / todayTotal["AB"]
-                            todayTotal["OPS"] = todayTotal["OBP"] + todayTotal["SLG"]
-
-                            # ERA, WHIP, K9另外計算
-                            # 防止有投手本季成績為0.0
-                            try:
-                                # 把三進位的局數轉成十進位，才可以計算
-                                IP_decimal = (
-                                    int(todayTotal["IP"])
-                                    + (todayTotal["IP"] - int(todayTotal["IP"]))
-                                    * 10
-                                    * 3**-1
-                                )
-                                todayTotal["ERA"] = round(
-                                    todayTotal["ER"] * 9 / IP_decimal, 2
-                                )
-                                todayTotal["WHIP"] = round(
-                                    (todayTotal["H_P"] + todayTotal["BB_P"])
-                                    / IP_decimal,
-                                    2,
-                                )
-                                todayTotal["K9"] = round(
-                                    todayTotal["K_P"] * 9 / IP_decimal, 2
-                                )
-                            except ZeroDivisionError:
-                                todayTotal["ERA"] = 0
-                                todayTotal["WHIP"] = 0
-                                todayTotal["K9"] = 0
+                            adjustUnadditive("Fielders", todayTotal, True, True)
+                            adjustUnadditive("Pitchers", todayTotal, True, True)
 
                             # 最後把處理完的stats加上WeeklyStats所需要的id, account column
                             todayTotal["id"] = Account.id
@@ -2102,8 +1911,18 @@ def todayupdate():
                             )
                             connection.execute(updateStmt)
 
-                seasonUpdate()
+                # Fielders, Pitchers在今日成績會分成兩個Table處理
+                # WeeklyStats則會把Fielders, Pitchers混在一起處理
+                seasonUpdate("Fielders", todayFieldersResult, fielders)
+                seasonUpdate("Pitchers", todayPitchersResult, pitchers)
                 weeklyUpdate()
+
+                # 更新完後，就可以清除Today的資料了
+                deleteStmt = delete(todayfielders)
+                connection.execute(deleteStmt)
+                deleteStmt = delete(todaypitchers)
+                connection.execute(deleteStmt)
+
             return "更新完成！"
         else:
             return "更新失敗。"
