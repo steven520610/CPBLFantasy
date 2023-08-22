@@ -2,13 +2,14 @@
 <html>
 
 <head>
-    <title>My League</title>
+    <title>{{ account }}</title>
     <style>
         #buttonbar {
             display: flex;
         }
     </style>
     <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
+    <link rel="icon" href="{{ url_for("static", filename="img/logo/{}.png".format(account)) }}">
 </head>
 
 <body>
@@ -16,7 +17,9 @@
         <h1 class="text-primary bg-warning">歡迎登入Fantasy Baseball
             <button id="time" @mouseover="updateTime" @mouseleave="clearTime">游標移動至此以顯示時間</button>
         </h1>
-        <h2 id="date" v-if="showText">[[ currentTime ]]</h2>
+        <template v-if="showText">
+            <h2 id="date">[[ currentTime ]]</h2>
+        </template>
         <h3 class="text-primary">您的帳號是: {{ account }}, 您支持的球隊為:{{ team }}</h3>
     </div>
 
