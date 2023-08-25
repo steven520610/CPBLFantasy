@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href={{url_for("static",filename="css/player.css")}} rel="stylesheet">
+    <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
     <title>{{ account }}</title>
     <link rel="icon" href="{{ url_for("static", filename="img/logo/{}.png".format(account)) }}">
@@ -23,6 +24,26 @@
             </div>
             <div id="date">
                 <h1></h1>
+            </div>
+        </div>
+        <div class="row">
+            <div class="page">
+                <form action={{ url_for("player") }} method="POST">
+                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="submit" class="btn btn-primary" value="My Team">
+                </form>
+            </div>
+            <div class="page">
+                <form action={{ url_for("matchup") }} method="POST">
+                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="submit" class="btn btn-success" value="Matchup">
+                </form>
+            </div>
+            <div class="page">
+                <form action={{ url_for("draft") }} method="POST">
+                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="submit" class="btn btn-dark" value="Draft">
+                </form>
             </div>
         </div>
     </header>
@@ -51,7 +72,7 @@
                         {% for fielder in fielders %}
                             {% if not fielder %}
                                 <tr class="editable">
-                                    {% if ns.position_index < 10 %}
+                                    {% if ns.position_index < 11 %}
                                         <td class="position">
                                             <span class="positionButton">{{ positionDict["Fielder"][ns.position_index] }}</span>
                                         </td>
@@ -75,7 +96,7 @@
                                 </tr>
                             {% else %}
                                 <tr class="editable">
-                                    {% if ns.position_index < 10 %}
+                                    {% if ns.position_index < 11 %}
                                         <td class="position">
                                                 <span class="positionButton">{{ positionDict["Fielder"][ns.position_index] }}</span>
                                         </td>
@@ -175,7 +196,7 @@
                         {% for pitcher in pitchers %}
                             {% if not pitcher %}
                                 <tr class="editable">
-                                {% if ns.position_index < 6 %}
+                                {% if ns.position_index < 8 %}
                                     <td class="position">
                                         <span class="positionButton">{{ positionDict["Pitcher"][ns.position_index] }}</span>
                                     </td>
@@ -199,7 +220,7 @@
                                 </tr>
                             {% else %}
                                 <tr class="editable">
-                                    {% if ns.position_index < 6 %}
+                                    {% if ns.position_index < 8 %}
                                         <td class="position">
                                             <span class="positionButton">{{ positionDict["Pitcher"][ns.position_index] }}</span>
                                         </td>

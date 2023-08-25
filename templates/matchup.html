@@ -7,6 +7,7 @@
     <link href={{url_for("static",filename="css/matchup.css")}} rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
     <title>您的首頁</title>
+    <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
     <link rel="icon" href="{{ url_for("static", filename="img/logo/{}.png".format(account)) }}">
     <script src={{url_for("static", filename="js/jQuery.js")}}></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
@@ -17,11 +18,26 @@
 
 <body>
     <header>
-    <!--
-        <div id="dateBar">
-            <h1></h1>
+        <div class="row justify-content-between">
+            <div class="page">
+                <form action={{ url_for("player") }} method="POST">
+                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="submit" class="btn btn-primary" value="My Team">
+                </form>
+            </div>
+            <div class="page">
+                <form action={{ url_for("matchup") }} method="POST">
+                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="submit" class="btn btn-success" value="Matchup">
+                </form>
+            </div>
+            <div class="page">
+                <form action={{ url_for("draft") }} method="POST">
+                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="submit" class="btn btn-dark" value="Draft">
+                </form>
+            </div>
         </div>
-    -->
         <div id="Head2Head">
             <table>
                 <thead>
@@ -200,7 +216,11 @@
                                         {% endif %}
 
                                         <!--position-->
-                                        <td class="position">{{ RosterPositions["Fielder"][i] }}</td>
+                                        {% if i < 11 %}
+                                            <td class="position">{{ RosterPositions["Fielder"][i] }}</td>
+                                        {% else %}
+                                            <td class="position">BN</td>
+                                        {% endif %}
 
                                         <!--opponent-->
                                         <td class="type player">
@@ -308,9 +328,9 @@
                                         {% endif %}
 
                                         <!--position-->
-                                        <!--因為有可能對手的野手沒選到十個
+                                        <!--因為有可能對手的野手沒選到十一個
                                         所以加這個條件-->
-                                        {% if i < 10 %}
+                                        {% if i < 11 %}
                                             <td class="position">{{ RosterPositions["Fielder"][i] }}</td>
                                         {% else %}
                                             <td class="position bench">BN</td>
@@ -384,7 +404,11 @@
                                         {% endif %}
 
                                         <!--position-->
-                                        <td class="position">{{ RosterPositions["Fielder"][i] }}</td>
+                                        {% if i < 11 %}
+                                            <td class="position">{{ RosterPositions["Fielder"][i] }}</td>
+                                        {% else %}
+                                            <td class="position">BN</td>
+                                        {% endif %}
 
                                         <!--opponent-->
                                         <td class="type player">
@@ -451,7 +475,7 @@
                                         {% endfor %}
 
                                         <!--position-->
-                                        {% if i < 10 %}
+                                        {% if i < 11 %}
                                             <td class="position">{{ RosterPositions["Fielder"][i] }}</td>
                                         {% else %}
                                             <td class="position bench">BN</td>
@@ -635,7 +659,7 @@
                                         {% endif %}
                 
                                         <!--position-->
-                                        {% if i < 6 %}
+                                        {% if i < 8 %}
                                             <td class="position">{{ RosterPositions["Pitcher"][i] }}</td>
                                         {% else %}
                                             <td class="position bench">BN</td>
@@ -731,7 +755,7 @@
                                         {% endif %}
                 
                                         <!--position-->
-                                        {% if i < 6 %}
+                                        {% if i < 8 %}
                                             <td class="position">{{ RosterPositions["Pitcher"][i] }}</td>
                                         {% else %}
                                             <td class="position bench">BN</td>
@@ -797,7 +821,7 @@
                                         {% endif %}
                 
                                         <!--position-->
-                                        {% if i < 6 %}
+                                        {% if i < 8 %}
                                             <td class="position">{{ RosterPositions["Pitcher"][i] }}</td>
                                         {% else %}
                                             <td class="position bench">BN</td>
@@ -859,7 +883,7 @@
                                         {% endfor %}
                 
                                         <!--position-->
-                                        {% if i < 6 %}
+                                        {% if i < 8 %}
                                             <td class="position">{{ RosterPositions["Pitcher"][i] }}</td>
                                         {% else %}
                                             <td class="position bench">BN</td>

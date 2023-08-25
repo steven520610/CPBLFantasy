@@ -10,8 +10,19 @@ body {
 /* header部分 */
 header {
     flex: 1;
-    display: flex;
     width: 80%;
+    display: flex;
+    flex-direction: column;
+}
+
+.row {
+    margin: calc(1 * 1.5rem) !important;
+}
+
+.page {
+    flex: 1;
+    display: flex;
+    justify-content: center;
 }
 
 .team {

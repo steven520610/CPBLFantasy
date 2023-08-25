@@ -15,7 +15,7 @@ from sqlalchemy import (
     update,
     insert,
     delete,
-    and_,
+    func,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from threading import Lock
@@ -56,12 +56,12 @@ socketio = SocketIO(app, cors_allowed_origins="http://127.0.0.1:5000")
 rearrangeDict = {}
 rearrange = False
 # 根據球員的position，決定該球員會在網頁的哪一列上，讓該球員會對應到守位格
-# 總共有20個格子 (16個正常守位 + 4個BN)
+# 總共有23個格子 (19個正常守位 + 4個BN)
 positionDict = {
-    # 10
-    "Fielder": ["C", "1B", "2B", "3B", "SS", "OF", "OF", "OF", "OF", "Util"],
-    # 6
-    "Pitcher": ["SP", "SP", "SP", "SP", "RP", "RP"],
+    # 11
+    "Fielder": ["C", "1B", "2B", "3B", "SS", "OF", "OF", "OF", "OF", "Util", "Util"],
+    # 8
+    "Pitcher": ["SP", "SP", "SP", "SP", "RP", "RP", "RP", "RP"],
 }
 
 
@@ -333,12 +333,13 @@ with app.app_context():
         Used = {
             "OF": {"Count": 0, "Limit": 4},
             "SP": {"Count": 0, "Limit": 4},
-            "RP": {"Count": 0, "Limit": 2},
+            "RP": {"Count": 0, "Limit": 4},
+            "Util": {"Count": 0, "Limit": 2},
         }
 
         # Fielder
         # 宣告一個用來存調整順序後的球員陣列
-        rearrangeQueryFielders = [False] * 10
+        rearrangeQueryFielders = [False] * 11
 
         # 先賦予每個球員 "是否已經被分配守位" 這個屬性
         for queryFielder in queryFielders:
@@ -354,7 +355,6 @@ with app.app_context():
         # 決定Util格子是否被任一球員使用
         hasMultiPosition = False
         firstRound = True
-        UtilUsed = False
 
         while fielderIndex < len(queryFielders) or hasMultiPosition:
             # 第一輪，先略過多守位球員
@@ -405,10 +405,15 @@ with app.app_context():
 
                 # 在所有守位都檢查完或是該球員已經被分配到格子的情況
                 # Util所有球員都能放
-                if not queryFielders[fielderIndex].assignPosition and not UtilUsed:
-                    rearrangeQueryFielders[9] = queryFielders[fielderIndex]
+                if (
+                    not queryFielders[fielderIndex].assignPosition
+                    and Used["Util"]["Count"] < 2
+                ):
+                    rearrangeQueryFielders[
+                        positionDict["Fielder"].index("Util") + Used["Util"]["Count"]
+                    ] = queryFielders[fielderIndex]
+                    Used["Util"]["Count"] += 1
                     queryFielders[fielderIndex].assignPosition = True
-                    UtilUsed = True
 
                 # 所有守位(含Util)都判斷完，但該球員依舊沒有被分配到格子
                 # -> BN
@@ -469,10 +474,16 @@ with app.app_context():
                         if shouldBreak:
                             break
 
-                    if not queryFielders[fielderIndex].assignPosition and not UtilUsed:
-                        rearrangeQueryFielders[9] = queryFielders[fielderIndex]
+                    if (
+                        not queryFielders[fielderIndex].assignPosition
+                        and Used["Util"]["Count"] < 2
+                    ):
+                        rearrangeQueryFielders[
+                            positionDict["Fielder"].index("Util")
+                            + Used["Util"]["Count"]
+                        ] = queryFielders[fielderIndex]
+                        Used["Util"]["Count"] += 1
                         queryFielders[fielderIndex].assignPosition = True
-                        UtilUsed = True
 
                     if not queryFielders[fielderIndex].assignPosition:
                         rearrangeQueryFielders.append(False)
@@ -492,7 +503,7 @@ with app.app_context():
         positionIndex = 0
         hasMultiPosition = False
         firstRound = True
-        BNIndex = 6
+        BNIndex = 8
         while pitcherIndex < len(queryPitchers) or hasMultiPosition:
             # 第一輪，先略過多守位球員
             if firstRound:
@@ -670,13 +681,14 @@ def register():
         else:
             if "team" not in received:
                 new_account = Account(
-                    account, generate_password_hash(password, "sha256"), None
+                    account, generate_password_hash(password, "sha256"), None, "TBD"
                 )
             else:
                 new_account = Account(
                     account,
                     generate_password_hash(password, "sha256"),
                     received["team"],
+                    "TBD",
                 )
             db.session.add(new_account)
             db.session.commit()
@@ -798,287 +810,6 @@ def myleague(id):
     account = query.account
     team = query.team
     return render_template("myleague.html", account=account, team=team)
-
-
-# 為了在jinja2內使用isinstance這個功能
-# 需要加上的地方
-@app.template_filter("isinstance")
-def isinstance_filter(obj, class_name):
-    if class_name == "Fielder":
-        return isinstance(obj, Fielder)
-    elif class_name == "Pitcher":
-        return isinstance(obj, Pitcher)
-    else:
-        import builtins
-
-        type_fn = getattr(builtins, class_name, None)
-        return isinstance(obj, type_fn)
-
-
-@app.context_processor
-def utility_processor():
-    def get_attribute(obj, attr):
-        return getattr(obj, attr)
-
-    def get_min(playersCount):
-        min = 99
-        for key, value in playersCount.items():
-            if value < min:
-                min = value
-        return min
-
-    def get_max(playersCount):
-        max = 0
-        for key, value in playersCount.items():
-            if value > max:
-                max = value
-        return max
-
-    return dict(get_attribute=get_attribute, get_min=get_min, get_max=get_max)
-
-
-# 選秀頁面
-@app.route("/draft", methods=["GET", "POST"])
-def draft():
-    def score_fielder(fielder, stats):
-        OPS_plus = ((fielder.OBP / AVG_OBP) + (fielder.SLG / AVG_SLG) - 1) * 100
-        score = 0
-        for key, value in SCORING_FIELDER.items():
-            score += getattr(fielder, key) * value if key in stats else 0
-        score += (OPS_plus - 100) * (fielder.PA / AVG_PA)
-        return score
-
-    def score_pitcher(pitcher, stats):
-        IP_decimal = int(pitcher.IP) + (pitcher.IP - int(pitcher.IP)) * 3**-1
-        score = 0
-        for key, value in SCORING_PITCHER.items():
-            score += getattr(pitcher, key) * value if key in stats else 0
-        return score
-
-    # Query for sidebar
-    query_account = db.session.query(Account).filter(Account.account != "admin").all()
-    query_account = sorted(query_account, key=lambda k: k.id)
-    # Query for player
-    fielder_categories, pitcher_categories, _, _ = read_category()
-
-    # print(pitcher_categories)
-    fielders = db.session.query(Fielder).all()
-    pitchers = db.session.query(Pitcher).all()
-
-    players = fielders + pitchers
-
-    for i, player in enumerate(
-        sorted(
-            players,
-            key=lambda p: score_fielder(p, fielder_categories)
-            if isinstance(p, Fielder)
-            else score_pitcher(p, pitcher_categories),
-            reverse=True,
-        ),
-        start=1,
-    ):
-        player.Rank = i
-    players = sorted(players, key=lambda player: player.Rank, reverse=False)
-    print(players)
-    print(players[0].position)
-    positions = {
-        "fielders": [
-            "C",
-            "1B",
-            "2B",
-            "3B",
-            "SS",
-            "OF",
-            "OF",
-            "OF",
-            "OF",
-            "Util",
-            "BN",
-            "BN",
-            "BN",
-            "BN",
-        ],
-        "pitchers": ["SP", "SP", "SP", "SP", "RP", "RP", "BN", "BN", "BN", "BN"],
-    }
-    return render_template(
-        "draft.html",
-        login_account=request.form["account"],
-        accounts=query_account,
-        players=players,
-        fielder_categories=fielder_categories,
-        pitcher_categories=pitcher_categories,
-        positions=positions,
-    )
-
-
-# 選秀頁面，接收user端請求選秀的時間
-@app.route("/draft/time", methods=["GET"])
-def time():
-    from datetime import datetime, timedelta
-
-    # draft_time = datetime.now() + timedelta(hours=1)
-    draft_time = datetime(2023, 8, 13, 13, 19, 20)
-    return jsonify({"Time": draft_time.isoformat("T", "seconds")})
-
-
-# 選秀頁面，接收user端發出的firstTimer事件
-@socketio.on("firstTimer", namespace="/draft")
-def firstTimer(_):
-    global time_flag
-    # 第一個分頁發送emit後
-    # 會更改time_flag並等待一秒
-    # 弭平不同分頁進入選秀頁面，不到一秒的時間差
-    # 讓所有分頁可以同步開始
-    if not time_flag:
-        time_flag = True
-        socketio.sleep(1)
-        socketio.emit("firstTimer", {"message": "Success!"}, namespace="/draft")
-
-
-# 選秀頁面，接收user端發出的draftTimer事件
-@socketio.on("draftTimer", namespace="/draft")
-def draftTimer(auto):
-    if auto:
-        socketio.sleep(1)
-    socketio.emit("draftTimer", {"message": "Success!"}, namespace="/draft")
-
-
-# 選秀頁面，接收user端選擇球員並按下選秀按鈕後
-# 更新資料庫
-@socketio.on("update", namespace="/draft")
-def draftupdate(data):
-    if data["auto"]:
-        socketio.sleep(1)
-    print(data)
-    try:
-        if data["HR_fielder"]:
-            query = (
-                db.session.query(Fielder)
-                .filter(Fielder.player_id == int(data["player_ID"]))
-                .first()
-            )
-            query.Account = data["Account"]
-            query.round = data["round"]
-        else:
-            query = (
-                db.session.query(Pitcher)
-                .filter(Pitcher.player_id == int(data["player_ID"]))
-                .first()
-            )
-            query.Account = data["Account"]
-            query.round = data["round"]
-        db.session.commit()
-        data["message"] = "Success!"
-        socketio.emit("update", data, namespace="/draft")
-    except ValueError as e:
-        data["message"] = "Failed!"
-        socketio.emit("update", data, namespace="/draft")
-
-
-# 選秀頁面，處理user端按下Teams選項後，傳送AJAX請求
-# 列出該user各位置所選球員
-@app.route("/draft/teams", methods=["POST"])
-def teams():
-    login = request.get_json()
-    login = login["login"]
-    # print(type(login), login)
-    try:
-        query_fielders = (
-            db.session.query(Fielder).filter(Fielder.Account == login).all()
-        )
-        query_pitchers = (
-            db.session.query(Pitcher).filter(Pitcher.Account == login).all()
-        )
-
-        query_fielders = sorted(query_fielders, key=lambda k: k.round, reverse=False)
-        query_pitchers = sorted(query_pitchers, key=lambda k: k.round, reverse=False)
-
-        fielder_categories, pitcher_categories, _, _ = read_category()
-
-        fielders_list_of_dicts = [
-            fielder.to_dict(fielder_categories) for fielder in query_fielders
-        ]
-        pitchers_list_of_dicts = [
-            pitcher.to_dict(pitcher_categories) for pitcher in query_pitchers
-        ]
-        return_data = {
-            "fielders": fielders_list_of_dicts,
-            "pitchers": pitchers_list_of_dicts,
-        }
-        # print(return_data["pitchers"])
-        return jsonify(
-            {
-                "data": return_data,
-                "message": "Success!",
-                "stats": [fielder_categories, pitcher_categories],
-            }
-        )
-    except ValueError as e:
-        return jsonify({"message": "failed"})
-
-
-started = False
-current_clients = []
-background_task = Lock()
-
-
-def background_update():
-    """背景任務，用來定期的爬取TodayFielder, TodayPitcher內的資料
-
-    Returns:
-        None
-    """
-    if background_task.acquire(False):
-        try:
-            global started
-            while started:
-                socketio.sleep(10)
-                # 因為disconnect後
-                # 雖然started已經設為False了
-                # 但可能本來就已經進入while loop
-                # 但還在這個等待的時間
-                # 因此額外加上一個判斷式
-                # 如果是在等待時間disconnect
-                # 就不會再執行
-                if started:
-                    emit_json = {}
-                    query_fielder = Table(
-                        "TodayFielder", metadata, autoload_with=engine
-                    )
-                    query_pitcher = Table(
-                        "TodayPitcher", metadata, autoload_with=engine
-                    )
-                    with engine.begin() as connection:
-                        # Fielder
-                        stmt = query_fielder.select()
-                        result = connection.execute(stmt)
-                        rows = result.fetchall()
-                        fielders = []
-                        for row in rows:
-                            fielder_data = []
-                            for data in row:
-                                fielder_data.append(data)
-                            fielders.append(fielder_data)
-
-                        # Pitcher
-                        stmt = query_pitcher.select()
-                        result = connection.execute(stmt)
-                        rows = result.fetchall()
-                        pitchers = []
-                        for row in rows:
-                            pitcher_data = []
-                            for data in row:
-                                pitcher_data.append(data)
-                            pitchers.append(pitcher_data)
-
-                        emit_json["Fielder"] = fielders
-                        emit_json["Pitcher"] = pitchers
-
-                        socketio.emit("update", emit_json, namespace="/matchup")
-
-                    # print("Update Success!")
-        finally:
-            background_task.release()
 
 
 # 球員頁面
@@ -1230,6 +961,70 @@ def playerUpdate():
     return jsonify({"message": "Success"})
 
 
+started = False
+current_clients = []
+background_task = Lock()
+
+
+def background_update():
+    """背景任務，用來定期的爬取TodayFielder, TodayPitcher內的資料
+
+    Returns:
+        None
+    """
+    if background_task.acquire(False):
+        try:
+            global started
+            while started:
+                socketio.sleep(10)
+                # 因為disconnect後
+                # 雖然started已經設為False了
+                # 但可能本來就已經進入while loop
+                # 但還在這個等待的時間
+                # 因此額外加上一個判斷式
+                # 如果是在等待時間disconnect
+                # 就不會再執行
+                if started:
+                    emit_json = {}
+                    query_fielder = Table(
+                        "TodayFielder", metadata, autoload_with=engine
+                    )
+                    query_pitcher = Table(
+                        "TodayPitcher", metadata, autoload_with=engine
+                    )
+                    with engine.begin() as connection:
+                        # Fielder
+                        stmt = query_fielder.select()
+                        result = connection.execute(stmt)
+                        rows = result.fetchall()
+                        fielders = []
+                        for row in rows:
+                            fielder_data = []
+                            for data in row:
+                                fielder_data.append(data)
+                            fielders.append(fielder_data)
+
+                        # Pitcher
+                        stmt = query_pitcher.select()
+                        result = connection.execute(stmt)
+                        rows = result.fetchall()
+                        pitchers = []
+                        for row in rows:
+                            pitcher_data = []
+                            for data in row:
+                                pitcher_data.append(data)
+                            pitchers.append(pitcher_data)
+
+                        emit_json["Fielder"] = fielders
+                        emit_json["Pitcher"] = pitchers
+
+                        socketio.emit("update", emit_json, namespace="/matchup")
+
+                    # print("Update Success!")
+        finally:
+            background_task.release()
+
+
 @app.route("/matchup", methods=["GET", "POST"])
 def matchup():
     # 根據league_home頁面的表單內的hidden input
@@ -1304,8 +1099,20 @@ def matchup():
     FieldersCount, PitchersCount = {}, {}
     # 手動宣告此聯盟內的Roster Positions
     RosterPositions = {
-        "Fielder": ["C", "1B", "2B", "3B", "SS", "OF", "OF", "OF", "OF", "Util"],
-        "Pitcher": ["SP", "SP", "SP", "SP", "RP", "RP"],
+        "Fielder": [
+            "C",
+            "1B",
+            "2B",
+            "3B",
+            "SS",
+            "OF",
+            "OF",
+            "OF",
+            "OF",
+            "Util",
+            "Util",
+        ],
+        "Pitcher": ["SP", "SP", "SP", "SP", "RP", "RP", "RP", "RP"],
     }
 
     # Fielders
@@ -1417,6 +1224,237 @@ def matchup_disconnect():
         print("All pages disconnected.")
     current_clients.pop()
     print(current_clients)
+
+
+# 為了在jinja2內使用isinstance這個功能
+# 需要加上的地方
+@app.template_filter("isinstance")
+def isinstance_filter(obj, class_name):
+    if class_name == "Fielder":
+        return isinstance(obj, Fielder)
+    elif class_name == "Pitcher":
+        return isinstance(obj, Pitcher)
+    else:
+        import builtins
+
+        type_fn = getattr(builtins, class_name, None)
+        return isinstance(obj, type_fn)
+
+
+@app.context_processor
+def utility_processor():
+    def get_attribute(obj, attr):
+        return getattr(obj, attr)
+
+    def get_min(playersCount):
+        min = 99
+        for key, value in playersCount.items():
+            if value < min:
+                min = value
+        return min
+
+    def get_max(playersCount):
+        max = 0
+        for key, value in playersCount.items():
+            if value > max:
+                max = value
+        return max
+
+    return dict(get_attribute=get_attribute, get_min=get_min, get_max=get_max)
+
+
+# 選秀頁面
+@app.route("/draft", methods=["GET", "POST"])
+def draft():
+    def score_fielder(fielder, stats):
+        OPS_plus = ((fielder.OBP / AVG_OBP) + (fielder.SLG / AVG_SLG) - 1) * 100
+        score = 0
+        for key, value in SCORING_FIELDER.items():
+            score += getattr(fielder, key) * value if key in stats else 0
+        score += (OPS_plus - 100) * (fielder.PA / AVG_PA)
+        return score
+
+    def score_pitcher(pitcher, stats):
+        IP_decimal = int(pitcher.IP) + (pitcher.IP - int(pitcher.IP)) * 3**-1
+        score = 0
+        for key, value in SCORING_PITCHER.items():
+            score += getattr(pitcher, key) * value if key in stats else 0
+        return score
+
+    # Query for sidebar
+    query_account = db.session.query(Account).filter(Account.account != "admin").all()
+    query_account = sorted(query_account, key=lambda k: k.id)
+    # Query for player
+    fielder_categories, pitcher_categories, _, _ = read_category()
+
+    # print(pitcher_categories)
+    fielders = db.session.query(Fielder).all()
+    pitchers = db.session.query(Pitcher).all()
+
+    players = fielders + pitchers
+
+    for i, player in enumerate(
+        sorted(
+            players,
+            key=lambda p: score_fielder(p, fielder_categories)
+            if isinstance(p, Fielder)
+            else score_pitcher(p, pitcher_categories),
+            reverse=True,
+        ),
+        start=1,
+    ):
+        player.Rank = i
+    players = sorted(players, key=lambda player: player.Rank, reverse=False)
+    print(players)
+    print(players[0].position)
+    positions = {
+        "fielders": [
+            "C",
+            "1B",
+            "2B",
+            "3B",
+            "SS",
+            "OF",
+            "OF",
+            "OF",
+            "OF",
+            "Util",
+            "Util",
+            "BN",
+            "BN",
+            "BN",
+            "BN",
+        ],
+        "pitchers": [
+            "SP",
+            "SP",
+            "SP",
+            "SP",
+            "RP",
+            "RP",
+            "RP",
+            "RP",
+            "BN",
+            "BN",
+            "BN",
+            "BN",
+        ],
+    }
+    return render_template(
+        "draft.html",
+        login_account=request.form["account"],
+        accounts=query_account,
+        players=players,
+        fielder_categories=fielder_categories,
+        pitcher_categories=pitcher_categories,
+        positions=positions,
+    )
+
+
+# 選秀頁面，接收user端請求選秀的時間
+@app.route("/draft/time", methods=["GET"])
+def time():
+    from datetime import datetime, timedelta
+
+    # draft_time = datetime.now() + timedelta(hours=1)
+    draft_time = datetime(2023, 8, 25, 13, 53, 45)
+    return jsonify({"Time": draft_time.isoformat("T", "seconds")})
+
+
+# 選秀頁面，接收user端發出的firstTimer事件
+@socketio.on("firstTimer", namespace="/draft")
+def firstTimer(_):
+    global time_flag
+    # 第一個分頁發送emit後
+    # 會更改time_flag並等待一秒
+    # 弭平不同分頁進入選秀頁面，不到一秒的時間差
+    # 讓所有分頁可以同步開始
+    if not time_flag:
+        time_flag = True
+        socketio.sleep(1)
+        socketio.emit("firstTimer", {"message": "Success!"}, namespace="/draft")
+
+
+# 選秀頁面，接收user端發出的draftTimer事件
+@socketio.on("draftTimer", namespace="/draft")
+def draftTimer(auto):
+    if auto:
+        socketio.sleep(1)
+    socketio.emit("draftTimer", {"message": "Success!"}, namespace="/draft")
+
+
+# 選秀頁面，接收user端選擇球員並按下選秀按鈕後
+# 更新資料庫
+@socketio.on("update", namespace="/draft")
+def draftupdate(data):
+    if data["auto"]:
+        socketio.sleep(1)
+    print(data)
+    try:
+        if data["HR_fielder"]:
+            query = (
+                db.session.query(Fielder)
+                .filter(Fielder.player_id == int(data["player_ID"]))
+                .first()
+            )
+            query.Account = data["Account"]
+            query.round = data["round"]
+        else:
+            query = (
+                db.session.query(Pitcher)
+                .filter(Pitcher.player_id == int(data["player_ID"]))
+                .first()
+            )
+            query.Account = data["Account"]
+            query.round = data["round"]
+        db.session.commit()
+        data["message"] = "Success!"
+        socketio.emit("update", data, namespace="/draft")
+    except ValueError as e:
+        data["message"] = "Failed!"
+        socketio.emit("update", data, namespace="/draft")
+
+
+# 選秀頁面，處理user端按下Teams選項後，傳送AJAX請求
+# 列出該user各位置所選球員
+@app.route("/draft/teams", methods=["POST"])
+def teams():
+    login = request.get_json()
+    login = login["login"]
+    # print(type(login), login)
+    try:
+        query_fielders = (
+            db.session.query(Fielder).filter(Fielder.Account == login).all()
+        )
+        query_pitchers = (
+            db.session.query(Pitcher).filter(Pitcher.Account == login).all()
+        )
+
+        query_fielders = sorted(query_fielders, key=lambda k: k.round, reverse=False)
+        query_pitchers = sorted(query_pitchers, key=lambda k: k.round, reverse=False)
+
+        fielder_categories, pitcher_categories, _, _ = read_category()
+
+        fielders_list_of_dicts = [
+            fielder.to_dict(fielder_categories) for fielder in query_fielders
+        ]
+        pitchers_list_of_dicts = [
+            pitcher.to_dict(pitcher_categories) for pitcher in query_pitchers
+        ]
+        return_data = {
+            "fielders": fielders_list_of_dicts,
+            "pitchers": pitchers_list_of_dicts,
+        }
+        # print(return_data["pitchers"])
+        return jsonify(
+            {
+                "data": return_data,
+                "message": "Success!",
+                "stats": [fielder_categories, pitcher_categories],
+            }
+        )
+    except ValueError as e:
+        return jsonify({"message": "failed"})
 
 
 # 把今日成績加入本週成績、球季成績
@@ -1547,52 +1585,75 @@ def todayupdate():
                             ) in FIELDER_CATEGORIES_TO_TODAY_CATEGORIES.items():
                                 # AVG, OBP, SLB, OPS不能直接加
                                 if key not in ["AVG", "OBP", "SLG", "OPS"]:
-                                    processDict[key] = (
-                                        getattr(SelectPlayer, key)
-                                        + todayPlayersResult[i][value]
-                                    )
+                                    try:
+                                        processDict[key] = (
+                                            getattr(SelectPlayer, key)
+                                            + todayPlayersResult[i][value]
+                                        )
+                                    except AttributeError:
+                                        processDict[key] = todayPlayersResult[i][value]
 
                             # 因為今日成績沒有一安，因此要額外計算
                             # 1H = H - 2H - 3H - HR
-                            processDict["1H"] = getattr(SelectPlayer, "1H") + (
-                                todayPlayersResult[i][7]
-                                - todayPlayersResult[i][8]
-                                - todayPlayersResult[i][9]
-                                - todayPlayersResult[i][10]
-                            )
+                            try:
+                                processDict["1H"] = getattr(SelectPlayer, "1H") + (
+                                    todayPlayersResult[i][7]
+                                    - todayPlayersResult[i][8]
+                                    - todayPlayersResult[i][9]
+                                    - todayPlayersResult[i][10]
+                                )
+                            except AttributeError:
+                                processDict["1H"] = (
+                                    todayPlayersResult[i][7]
+                                    - todayPlayersResult[i][8]
+                                    - todayPlayersResult[i][9]
+                                    - todayPlayersResult[i][10]
+                                )
                         elif type == "Pitchers":
                             for (
                                 key,
                                 value,
                             ) in PITCHER_CATEGORIES_TO_TODAY_CATEGORIES.items():
-                                if key == "IP":
-                                    # 把局數加總的十進位轉成三進位
-                                    IP_sum = (
-                                        getattr(SelectPlayer, key)
-                                        + todayPlayersResult[i][3]
-                                    )
-                                    integer = int(IP_sum)
-                                    decimal = IP_sum - integer
-                                    if decimal * 10 >= 3:
-                                        integer += 1
-                                        decimal -= 0.3
-                                    processDict[key] = integer + decimal
-                                elif key == "SV_H":
-                                    processDict["SV+H"] = (
-                                        getattr(SelectPlayer, "SV+H")
-                                        + todayPlayersResult[i][value]
-                                    )
-                                elif key not in ["K9", "ERA", "WHIP"]:
-                                    processDict[key] = (
-                                        getattr(SelectPlayer, key)
-                                        + todayPlayersResult[i][value]
-                                    )
-
+                                try:
+                                    if key == "IP":
+                                        # 把局數加總的十進位轉成三進位
+                                        IP_sum = (
+                                            getattr(SelectPlayer, key)
+                                            + todayPlayersResult[i][3]
+                                        )
+                                        integer = int(IP_sum)
+                                        decimal = IP_sum - integer
+                                        if decimal * 10 >= 3:
+                                            integer += 1
+                                            decimal -= 0.3
+                                        processDict[key] = integer + decimal
+                                    elif key == "SV_H":
+                                        processDict["SV+H"] = (
+                                            getattr(SelectPlayer, "SV+H")
+                                            + todayPlayersResult[i][value]
+                                        )
+                                    elif key not in ["K9", "ERA", "WHIP"]:
+                                        processDict[key] = (
+                                            getattr(SelectPlayer, key)
+                                            + todayPlayersResult[i][value]
+                                        )
+                                except AttributeError:
+                                    if key == "IP":
+                                        processDict[key] = todayPlayersResult[i][3]
+                                    elif key == "SV_H":
+                                        processDict["SV+H"] = todayPlayersResult[i][
+                                            value
+                                        ]
+                                    else:
+                                        processDict[key] = todayPlayersResult[i][value]
                             # 因為今日成績沒有APP，但是有出現在今日成績就代表有出場
-                            processDict["APP"] = getattr(SelectPlayer, "APP") + 1
+                            try:
+                                processDict["APP"] = getattr(SelectPlayer, "APP") + 1
+                            except AttributeError:
+                                processDict["APP"] = 1
 
                         adjustUnadditive(type, processDict, True, False)
-
+                        print(processDict)
                         if SelectPlayer:
                             update_stmt = (
                                 update(players)
@@ -1602,7 +1663,7 @@ def todayupdate():
                             connection.execute(update_stmt)
                         else:
                             # Account, position, round欄位可以為null，所以不需要設定
-                            insert_stmt = insert(pitchers).values(processDict)
+                            insert_stmt = insert(players).values(processDict)
                             connection.execute(insert_stmt)
 
                 # ==========
@@ -1715,11 +1776,9 @@ def todayupdate():
                                     players.c.player_id == todayplayers.c.player_id,
                                 )
                                 .where(
-                                    and_(
-                                        todayplayers.c.player_id
-                                        == todayPlayersResult[i][1],
-                                        players.c.Account == Account.account,
-                                    )
+                                    todayplayers.c.player_id
+                                    == todayPlayersResult[i][1],
+                                    players.c.Account == Account.account,
                                 )
                             )
                             result = connection.execute(query)

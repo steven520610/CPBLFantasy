@@ -7,8 +7,9 @@ body {
 
 header {
     flex: 1;
-    display: flex;
     width: 80%;
+    display: flex;
+    flex-direction: column;
 }
 
 #title {
@@ -25,6 +26,16 @@ header {
 #date {
     flex: 1;
     text-align: end;
+}
+
+.row {
+    margin-bottom: calc(1 * 1.5rem);
+}
+
+.page {
+    flex: 1;
+    display: flex;
+    justify-content: center;
 }
 
 #bodyContainer {

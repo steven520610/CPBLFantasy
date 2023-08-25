@@ -59,7 +59,7 @@ $(document).ready(function () {
     // 因此宣告socket時，就直接在最後加上namespace
     // 如此就不需要發送事件給預設(所有伺服器端的路由)，只會發送給/draft，可以減少一些資源
     // 在Flask端也需要做設定
-    const socket = io("http://localhost:5000/draft");
+    const socket = io("http://127.0.0.1:5000/draft");
     socket.on("connect", function () {
         console.log("Connected to Server!");
     });
@@ -83,7 +83,7 @@ $(document).ready(function () {
         else titleName[i + 1] = heads.eq(i).text();
     }
     let totalPicks = Number($(".order").last().text());
-    let totalRounds = Math.floor(totalPicks / 3);
+    let totalRounds = Math.floor(totalPicks / 4);
     //#endregion
 
 

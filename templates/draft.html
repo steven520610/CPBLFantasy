@@ -110,7 +110,7 @@
                 
                 {% set ns = namespace(count=0) %}
                 <span id="roundTitle"><h2>Drafting now!</h2></span>
-                {% for i in range(20) %}
+                {% for i in range(23) %}
                     <div class="round">
                         {% if i is even %}
                             {% for account in accounts %}
@@ -132,7 +132,7 @@
                             {% endfor %}
                         {% endif %}
                     </div>
-                    {% if i < 19 %}
+                    {% if i < 22 %}
                         <h3 class="line">
                             <span class="roundSeperator"> Round {{ i+2 }} </span>
                         </h3>
@@ -270,7 +270,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for i in range(14) %}
+                            {% for i in range(15) %}
                                 <tr>
                                     <td class="position">{{ positions["fielders"][i] }}</td>
                                     <td class="playerName"></td>
@@ -329,7 +329,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for i in range(10) %}
+                            {% for i in range(12) %}
                                 <tr>
                                     <td class="position">{{ positions["pitchers"][i] }}</td>
                                     <td class="playerName"></td>

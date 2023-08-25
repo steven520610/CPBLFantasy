@@ -3,13 +3,15 @@
 
 <head>
     <title>{{ account }}</title>
-    <style>
-        #buttonbar {
-            display: flex;
-        }
-    </style>
     <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
     <link rel="icon" href="{{ url_for("static", filename="img/logo/{}.png".format(account)) }}">
+    <style>
+        .page {
+            flex: 1;
+            display: flex;
+            justify-content:center;
+        }
+    </style>
 </head>
 
 <body>
@@ -23,28 +25,28 @@
         <h3 class="text-primary">您的帳號是: {{ account }}, 您支持的球隊為:{{ team }}</h3>
     </div>
 
-    <div class="container">
-        <div class="row">
-            <div class="col-md-4 bg-danger">
+    <header class="container">
+        <div class="row justify-content-between">
+            <div class="page">
                 <form action={{ url_for("player") }} method="POST">
                     <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-primary" value="My Team"></button>
+                    <input type="submit" class="btn btn-primary" value="My Team">
                 </form>
             </div>
-            <div class="col-md-4 bg-warning">
+            <div class="page">
                 <form action={{ url_for("matchup") }} method="POST">
                     <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-success" value="Matchup"></button>
+                    <input type="submit" class="btn btn-success" value="Matchup">
                 </form>
             </div>
-            <div class="col-md-4 bg-info">
+            <div class="page">
                 <form action={{ url_for("draft") }} method="POST">
                     <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-dark" value="Draft"></button>
+                    <input type="submit" class="btn btn-dark" value="Draft">
                 </form>
             </div>
         </div>
-    </div>
+    </header>
     <script src={{ url_for("static", filename="js/jQuery.js") }}></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script type="module" src={{ url_for("static", filename="js/myleague.js") }}></script>
