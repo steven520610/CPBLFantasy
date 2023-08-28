@@ -5,6 +5,7 @@ body {
     align-items: center;
 }
 
+/* header */
 header {
     flex: 1;
     width: 80%;
@@ -12,23 +13,13 @@ header {
     flex-direction: column;
 }
 
-#title {
-    flex: 1;
-    display: flex;
-    width: 100%;
+.container {
+    width: 80%;
 }
 
-#message {
-    flex: 1;
-    text-align: center;
-}
-
-#date {
-    flex: 1;
-    text-align: end;
-}
 
 .row {
+    margin-top: calc(1 * 1.5rem);
     margin-bottom: calc(1 * 1.5rem);
 }
 
@@ -38,129 +29,104 @@ header {
     justify-content: center;
 }
 
-#bodyContainer {
-    width: 80%;
-    border: 2px solid #424242;
+/* main */
+
+/* search & filter */
+.searchPlayer {
+    position: relative;
+    display: inline-block;
 }
 
-table {
-    width: 100%;
-    table-layout: fixed;
-    border-collapse: collapse;
-    border-spacing: 0;
+.label {
+    display: block;
 }
 
-tr {
-    height: 40px;
-    border-top: 1px solid #d7d7d7;
-    border-bottom: 1px solid #d7d7d7;
+#search {
+    padding-right: 20px;
 }
 
-th {
-    padding-left: 4px;
-    box-sizing: border-box;
+.cancel {
+    position: absolute;
+    right: 75px;
+    /* 調整按鈕位置 */
+    top: 50%;
+    transform: translateY(-15%);
+    /* display: none; */
+    cursor: pointer;
 }
 
-td {
-    font-size: 10px;
-    font-weight: 400;
-    padding-left: 4px;
-    box-sizing: border-box;
+#filterContainer {
+    display: flex;
 }
 
+.filter {
+    margin: 0.5rem 0.5rem 0.5rem 0;
+}
+
+.filterButton {
+    display: flex;
+    align-items: end;
+}
+
+/* playersTable */
 thead tr {
     background: #f6f9fc;
 }
 
-thead .position {
-    border-left: 1px solid #d7d7d7;
-    border-top: 1px solid #d7d7d7;
-    border-bottom: 1px solid #d7d7d7;
+thead th {
+    padding-left: 1rem;
 }
 
-tbody tr {
-    transition: all 0.2s ease-out;
+.playersTable {
+    font-size: 15px;
 }
 
-tbody tr:not(.swapactive):hover {
-    background: rgba(230, 237, 248, 0.5);
+.span {
+    width: 5%;
+}
+
+.rankings {
+    text-align: right;
 }
 
 .type {
-    width: 20%;
-    text-align: left;
-    padding-left: 6px;
-    box-sizing: border-box;
-}
-
-.position {
+    width: 30%;
     text-align: center;
-    padding-left: 0;
 }
 
-.positionButton {
-    display: block;
-    min-width: 40px;
-    max-width: 40px;
-    height: 30px;
-    line-height: 30px;
-    background: #0084ff;
-    color: white;
-    border-radius: 40%;
-    position: relative;
-    left: 10%;
+.lastHead {
+    border: 1px solid #dddddd;
 }
 
-.bench {
-    background: #eeeeee;
+.playerType {
+    width: 20%;
 }
 
-.editable {
+.roster {
+    width: 15%;
+    text-align: right;
+}
+
+.current {
+    text-align: right;
     cursor: pointer;
 }
 
-.swapactive {
-    background: rgba(190, 197, 248, 0.3);
+th.stat {
+    cursor: pointer
 }
-
-.swaptarget {
-    background: rgba(93, 182, 88, 0.4);
-}
-
-
-
 
 .stat {
-    text-align: center;
+    width: 7%;
+    text-align: right;
+}
+
+.notsearched {
+    display: none;
 }
 
 .notselected {
     display: none;
-}
-
-.empty {
-    padding-left: 6px;
-    width: 25%;
-}
-
-thead .type {
-    border-top: 1px solid #d7d7d7;
-    border-right: 1px solid #d7d7d7
-}
-
-
-tbody .position,
-tbody .type {
-    border: 1px solid #d7d7d7;
-}
-
-.link {
-    color: #0084ff;
-    text-decoration: none;
-}
-
-.link:hover {
-    text-decoration: underline;
 }
 
 .playerInfo {
@@ -168,8 +134,6 @@ tbody .type {
     color: #000000;
 }
 
-
-.total {
-    border-top: 1px solid #d7d7d7;
-    border-bottom: 1px solid #d7d7d7;
+.hide {
+    display: none;
 }

@@ -69,7 +69,6 @@ SCORING_FIELDER = {
 }
 SCORING_PITCHER = {
     "APP": 2,
-    "IP": 3.6,
     "W": 10,
     "L": -3,
     "HR": -2,

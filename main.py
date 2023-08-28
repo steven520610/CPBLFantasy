@@ -15,7 +15,6 @@ from sqlalchemy import (
     update,
     insert,
     delete,
-    func,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 from threading import Lock
@@ -50,6 +49,13 @@ app = create_app()
 metadata = MetaData()
 engine = create_engine(app.config["SQLALCHEMY_DATABASE_URI"])
 socketio = SocketIO(app, cors_allowed_origins="http://127.0.0.1:5000")
+
+# Core
+# 把從db抓取Table的步驟在一開始就執行
+# 這樣不用每個路由都重抓一次
+accountTable = Table("Account", metadata, autoload_with=engine)
+fielderTable = Table("Fielder", metadata, autoload_with=engine)
+pitcherTable = Table("Pitcher", metadata, autoload_with=engine)
 
 # 在player路由中會使用到
 # 每個帳號會當作key，裡面包含了該帳號的rearrange, rearrangeQueryFielders, rearrangeQueryPitchers
@@ -318,6 +324,8 @@ class Pitcher(db.Model):
 # 也就是一啟動時，並不在任何的上下文(路由)中
 # 因此需要透過這個方法，手動建立一個上下文
 # 否則會報RunTime Error
+
+# global要用的function也放這
 with app.app_context():
 
     def rearrangePlayer(account):
@@ -593,6 +601,18 @@ with app.app_context():
         global rearrange
         rearrange = True
 
+    def score_player(type, player, SCORING_PLAYER, categories):
+        score = 0
+        for key, value in SCORING_PLAYER.items():
+            score += getattr(player, key) * value if key in categories else 0
+        if type == "Fielder":
+            OPS_plus = ((player.OBP / AVG_OBP) + (player.SLG / AVG_SLG) - 1) * 100
+            score += (OPS_plus - 100) * (player.PA / AVG_PA)
+        elif type == "Pitcher":
+            IPDecimal = int(player.IP) + (player.IP - int(player.IP)) * 3**-1
+            score += IPDecimal * 3.6
+        return score
+
     rearrangeAll()
 
 
@@ -813,8 +833,8 @@ def myleague(id):
 
 
 # 球員頁面
-@app.route("/player", methods=["GET", "POST"])
-def player():
+@app.route("/myteam", methods=["GET", "POST"])
+def myteam():
     global rearrangeDict
 
     account = request.form["account"]
@@ -903,7 +923,7 @@ def player():
         pitcher.player_id = str(pitcher.player_id).rjust(4, "0")
 
     return render_template(
-        "player.html",
+        "myteam.html",
         account=queryAccount.account,
         fielders=rearrangeDict[account]["Fielders"],
         pitchers=rearrangeDict[account]["Pitchers"],
@@ -919,8 +939,8 @@ def player():
     )
 
 
-@app.route("/player/update", methods=["POST"])
-def playerUpdate():
+@app.route("/myteam/update", methods=["POST"])
+def myteamUpdate():
     global rearrangeDict
     receiveData = request.get_json()
     if receiveData["type"] == "Fielder":
@@ -1266,21 +1286,6 @@ def utility_processor():
 # 選秀頁面
 @app.route("/draft", methods=["GET", "POST"])
 def draft():
-    def score_fielder(fielder, stats):
-        OPS_plus = ((fielder.OBP / AVG_OBP) + (fielder.SLG / AVG_SLG) - 1) * 100
-        score = 0
-        for key, value in SCORING_FIELDER.items():
-            score += getattr(fielder, key) * value if key in stats else 0
-        score += (OPS_plus - 100) * (fielder.PA / AVG_PA)
-        return score
-
-    def score_pitcher(pitcher, stats):
-        IP_decimal = int(pitcher.IP) + (pitcher.IP - int(pitcher.IP)) * 3**-1
-        score = 0
-        for key, value in SCORING_PITCHER.items():
-            score += getattr(pitcher, key) * value if key in stats else 0
-        return score
-
     # Query for sidebar
     query_account = db.session.query(Account).filter(Account.account != "admin").all()
     query_account = sorted(query_account, key=lambda k: k.id)
@@ -1296,17 +1301,17 @@ def draft():
     for i, player in enumerate(
         sorted(
             players,
-            key=lambda p: score_fielder(p, fielder_categories)
+            key=lambda p: score_player(
+                "Fielder", p, SCORING_FIELDER, fielder_categories
+            )
             if isinstance(p, Fielder)
-            else score_pitcher(p, pitcher_categories),
+            else score_player("Pitcher", p, SCORING_PITCHER, pitcher_categories),
             reverse=True,
         ),
         start=1,
     ):
         player.Rank = i
     players = sorted(players, key=lambda player: player.Rank, reverse=False)
-    print(players)
-    print(players[0].position)
     positions = {
         "fielders": [
             "C",
@@ -1457,6 +1462,87 @@ def teams():
         return jsonify({"message": "failed"})
 
 
+@app.route("/player", methods=["GET", "POST"])
+def player():
+    myAccount = request.form["account"]
+
+    def accountsToList(accounts):
+        accountsList = []
+        for account in accounts:
+            accountsList.append(account.account)
+        return accountsList
+
+    def playersToList(players):
+        playersList = []
+        for player in players:
+            playerDict = {}
+            for c in player.__table__.columns:
+                if c.name == "db_id":
+                    continue
+                elif c.name == "1H":
+                    playerDict[c.name] = getattr(player, "H1")
+                elif c.name == "2H":
+                    playerDict[c.name] = getattr(player, "H2")
+                elif c.name == "3H":
+                    playerDict[c.name] = getattr(player, "H3")
+                elif c.name == "SV+H":
+                    playerDict[c.name] = getattr(player, "SV_H")
+                elif c.name == "K/9":
+                    playerDict[c.name] = getattr(player, "K9")
+                else:
+                    playerDict[c.name] = getattr(player, c.name)
+            playerDict["Rank"] = getattr(player, "Rank")
+            playerDict["show"] = getattr(player, "show")
+            playersList.append(playerDict)
+        return playersList
+
+    with engine.begin() as connection:
+        queryAccount = select(accountTable).where(accountTable.c.account != "admin")
+        accounts = connection.execute(queryAccount)
+        accounts = accountsToList(accounts)
+
+        fielders = db.session.query(Fielder).all()
+        pitchers = db.session.query(Pitcher).all()
+
+    players = fielders + pitchers
+
+    categories = {}
+    selectedFielderCategories, selectedPitcherCategories, _, _ = read_category()
+    categories["T_F"] = list(FIELDER_CATEGORIES_TO_TODAY_CATEGORIES.keys())
+    categories["T_P"] = list(PITCHER_CATEGORIES_TO_TODAY_CATEGORIES.keys())
+    categories["S_F"] = selectedFielderCategories
+    categories["S_P"] = selectedPitcherCategories
+    for i, player in enumerate(
+        sorted(
+            players,
+            key=lambda p: score_player(
+                "Fielder", p, SCORING_FIELDER, selectedFielderCategories
+            )
+            if isinstance(p, Fielder)
+            else score_player("Pitcher", p, SCORING_PITCHER, selectedPitcherCategories),
+            reverse=True,
+        ),
+        start=1,
+    ):
+        player.player_id = str(player.player_id).rjust(4, "0")
+        player.Rank = i
+        player.show = True
+
+    fielders = sorted(fielders, key=lambda fielder: fielder.Rank, reverse=False)
+    pitchers = sorted(pitchers, key=lambda pitcher: pitcher.Rank, reverse=False)
+
+    fielders = playersToList(fielders)
+    pitchers = playersToList(pitchers)
+
+    return render_template(
+        "player.html",
+        myAccount=myAccount,
+        accounts=accounts,
+        categories=categories,
+        fielders=fielders,
+        pitchers=pitchers,
+    )
+
 # 把今日成績加入本週成績、球季成績
 @app.route("/todayupdate", methods=["GET", "POST"])
 def todayupdate():
@@ -1465,20 +1551,27 @@ def todayupdate():
     # ==================
     def adjustUnadditive(type, processDict, shouldRound, isWeekly):
         if type == "Fielders":
-            processDict["AVG"] = processDict["H"] / processDict["AB"]
-            processDict["OBP"] = (
-                processDict["H"]
-                + processDict["BB"]
-                + processDict["IBB"]
-                + processDict["HBP"]
-            ) / (
-                processDict["AB"]
-                + processDict["BB"]
-                + processDict["IBB"]
-                + processDict["HBP"]
-                + processDict["SF"]
-            )
-            processDict["SLG"] = processDict["TB"] / processDict["AB"]
+            try:
+                processDict["AVG"] = processDict["H"] / processDict["AB"]
+                processDict["SLG"] = processDict["TB"] / processDict["AB"]
+            except ZeroDivisionError:
+                processDict["AVG"] = 0
+                processDict["SLG"] = 0
+            try:
+                processDict["OBP"] = (
+                    processDict["H"]
+                    + processDict["BB"]
+                    + processDict["IBB"]
+                    + processDict["HBP"]
+                ) / (
+                    processDict["AB"]
+                    + processDict["BB"]
+                    + processDict["IBB"]
+                    + processDict["HBP"]
+                    + processDict["SF"]
+                )
+            except ZeroDivisionError:
+                processDict["OBP"] = 0
             processDict["OPS"] = processDict["OBP"] + processDict["SLG"]
 
             if shouldRound:
@@ -1801,10 +1894,10 @@ def todayupdate():
 
                             # 野手和投手BN格子的索引不同
                             if type == "Fielders":
-                                if index >= 10:
+                                if index >= 11:
                                     continue
                             elif type == "Pitchers":
-                                if index >= 6:
+                                if index >= 8:
                                     continue
 
                             # 有被選入到某個Account的球員
