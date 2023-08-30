@@ -17,6 +17,7 @@ from sqlalchemy import (
     delete,
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.exceptions import BadRequestKeyError
 from threading import Lock
 from info import *
 
@@ -836,8 +837,43 @@ def myleague(id):
 @app.route("/myteam", methods=["GET", "POST"])
 def myteam():
     global rearrangeDict
-
     account = request.form["account"]
+    try:
+        addPlayerID = int(request.form["addPlayer"])
+        addPlayerType = request.form["addPlayerType"]
+        dropPlayerID = int(request.form["dropPlayer"])
+        dropPlayerType = request.form["dropPlayerType"]
+        with engine.begin() as connection:
+            if addPlayerType == "Fielder":
+                updateStmt = (
+                    update(fielderTable)
+                    .where(fielderTable.c.player_id == addPlayerID)
+                    .values(Account=account)
+                )
+            elif addPlayerType == "Pitcher":
+                updateStmt = (
+                    update(pitcherTable)
+                    .where(pitcherTable.c.player_id == addPlayerID)
+                    .values(Account=account)
+                )
+            connection.execute(updateStmt)
+
+            if dropPlayerType == "Fielder":
+                updateStmt = (
+                    update(fielderTable)
+                    .where(fielderTable.c.player_id == dropPlayerID)
+                    .values(Account=None)
+                )
+            elif dropPlayerType == "Pitcher":
+                updateStmt = (
+                    update(pitcherTable)
+                    .where(pitcherTable.c.player_id == dropPlayerID)
+                    .values(Account=None)
+                )
+            connection.execute(updateStmt)
+        rearrangePlayer(account)
+    except KeyError:
+        pass
     queryAccount = db.session.query(Account).filter(Account.account == account).first()
 
     # 取出TodayFielder, TodayPitcher Table內所有的比項
@@ -1542,6 +1578,94 @@ def player():
         fielders=fielders,
         pitchers=pitchers,
     )
+
+
+@app.route("/addplayer", methods=["GET"])
+def addplayer():
+    def playersToList(players):
+        playersList = []
+        for player in players:
+            playerDict = {}
+            for c in player.__table__.columns:
+                if c.name == "db_id":
+                    continue
+                elif c.name == "1H":
+                    playerDict[c.name] = getattr(player, "H1")
+                elif c.name == "2H":
+                    playerDict[c.name] = getattr(player, "H2")
+                elif c.name == "3H":
+                    playerDict[c.name] = getattr(player, "H3")
+                elif c.name == "SV+H":
+                    playerDict[c.name] = getattr(player, "SV_H")
+                elif c.name == "K/9":
+                    playerDict[c.name] = getattr(player, "K9")
+                else:
+                    playerDict[c.name] = getattr(player, c.name)
+            playerDict["show"] = True
+            playersList.append(playerDict)
+        return playersList
+
+    def selectPlayerToDict(player):
+        playerDict = {}
+        for c in player.__table__.columns:
+            if c.name == "db_id":
+                continue
+            elif c.name == "1H":
+                playerDict[c.name] = getattr(player, "H1")
+            elif c.name == "2H":
+                playerDict[c.name] = getattr(player, "H2")
+            elif c.name == "3H":
+                playerDict[c.name] = getattr(player, "H3")
+            elif c.name == "SV+H":
+                playerDict[c.name] = getattr(player, "SV_H")
+            elif c.name == "K/9":
+                playerDict[c.name] = getattr(player, "K9")
+            else:
+                playerDict[c.name] = getattr(player, c.name)
+        return playerDict
+
+    account = request.args.get("account")
+    player_id = request.args.get("pid")
+    selectPlayerFA = (
+        db.session.query(Fielder).filter(Fielder.player_id == player_id).first()
+    )
+    if not selectPlayerFA:
+        selectPlayerFA = (
+            db.session.query(Pitcher).filter(Pitcher.player_id == player_id).first()
+        )
+
+    categories = {}
+    selectedFielderCategories, selectedPitcherCategories, _, _ = read_category()
+    categories["T_F"] = list(FIELDER_CATEGORIES_TO_TODAY_CATEGORIES.keys())
+    categories["T_P"] = list(PITCHER_CATEGORIES_TO_TODAY_CATEGORIES.keys())
+    categories["S_F"] = selectedFielderCategories
+    categories["S_P"] = selectedPitcherCategories
+
+    fielders = rearrangeDict[account]["Fielders"]
+    pitchers = rearrangeDict[account]["Pitchers"]
+
+    fielders = playersToList(fielders)
+    pitchers = playersToList(pitchers)
+
+    selectPlayerFA = selectPlayerToDict(selectPlayerFA)
+
+    return render_template(
+        "addplayer.html",
+        fielders=fielders,
+        pitchers=pitchers,
+        selectPlayerFA=selectPlayerFA,
+        account=account,
+        player_id=player_id,
+        categories=categories,
+    )
+
+
+@app.route("/dropplayer", methods=["GET"])
+def dropplayer():
+    account = request.args.get("account")
+    player_id = request.args.get("pid")
+    return "0"
+
 
 # 把今日成績加入本週成績、球季成績
 @app.route("/todayupdate", methods=["GET", "POST"])

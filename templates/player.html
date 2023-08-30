@@ -98,12 +98,13 @@
                 <table class="fieldersTable" v-show="fieldersShow">
                     <thead>
                         <tr>
-                            <th class="span" colspan="2"></th>
+                            <th class="span" colspan="3"></th>
                             <th class="rankings">Rankings</th>
                             <th class="type" colspan="23">Batting</th>
                         </tr>
                         <tr class="lastHead">
                             <th class="playerType">Batters</th>
+                            <th class="icon"></th>
                             <th class="roster">Roster Status</th>
                             <th class="current" :class="{sorted: fielderSortCategory == 'current'}" @click="sortTable('Rank', 'Fielder')">Current</th>
                             <th class="stat" @click="sortTable('H', 'Fielder')">H/AB</th>
@@ -122,6 +123,11 @@
                                 <a :href="addPlayerURL(fielder)" class="link" target="_blank">[[ fielder.name ]]</a>
                                 <span class="playerInfo">[[ addPlayerInfo(fielder) ]]</span>
                             </td>
+                            <td class="icon">
+                                <a :href="toDropPlayer(fielder)" v-if="isMyPlayer(fielder)" class="myPlayer">-</a>
+                                <a :href="toAddPlayer(fielder)" v-else-if="isFreeAgent(fielder)" class="addable">+</a>
+                                <a href="#" v-else class="notaddable"></a>
+                            </td>
                             <td class="roster" v-if="fielder.Account">[[ fielder.Account ]]</td>
                             <td class="roster" v-else>FA</td>
                             <td class="current">[[ fielder.Rank ]]</td>
@@ -137,12 +143,13 @@
                 <table class="pitchersTable" v-show="pitchersShow">
                     <thead>
                         <tr>
-                            <th class="span" colspan="2"></th>
+                            <th class="span" colspan="3"></th>
                             <th class="rankings">Rankings</th>
                             <th class="type" colspan="23">Pitching</th>
                         </tr>
                         <tr class="lastHead">
                             <th class="playerType">Pitchers</th>
+                            <th class="icon"></th>
                             <th class="roster">Roster Status</th>
                             <th class="current" :class="{sorted: pitcherSortCategory == 'current'}" @click="sortTable('Rank', 'Pitcher')">Current</th>
                             <th v-for="category in categories['T_P']" 
@@ -159,6 +166,11 @@
                             <td class="playerName">
                                 <a :href="addPlayerURL(pitcher)" class="link" target="_blank">[[ pitcher.name ]]</a>
                                 <span class="playerInfo">[[ addPlayerInfo(pitcher) ]]</span>
+                            </td>
+                            <td class="icon">
+                                <a :href="toDropPlayer(pitcher)" v-if="isMyPlayer(pitcher)" class="myPlayer">-</a>
+                                <a :href="toAddPlayer(pitcher)" v-else-if="isFreeAgent(pitcher)" class="addable">+</a>
+                                <a href="#" v-else class="notaddable"></a>
                             </td>
                             <td class="roster" v-if="pitcher.Account">[[ pitcher.Account ]]</td>
                             <td class="roster" v-else>FA</td>

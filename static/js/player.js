@@ -167,6 +167,18 @@ const app = Vue.createApp({
             }
             return team + player.position;
         },
+        toAddPlayer(player) {
+            return "http://127.0.0.1:5000/addplayer?account=" + this.myAccount + "&pid=" + player.player_id;
+        },
+        toDropPlayer(player) {
+            return "http://127.0.0.1:5000/dropplayer?account=" + this.myAccount + "pid=" + player.player_id;
+        },
+        isMyPlayer(player) {
+            return player.Account === this.myAccount;
+        },
+        isFreeAgent(player) {
+            return player.Account == null;
+        },
         isSelectedCategory(category, type) {
             if (type == "Fielder") {
                 return this.categories["S_F"].includes(category);
@@ -276,26 +288,3 @@ const app = Vue.createApp({
     delimiters: ['[[', ']]']
 })
 app.mount(".app")
-
-
-
-
-
-
-
-
-// $(document).ready(function () {
-//     let searchContainer = $(".searchPlayer")
-//     searchContainer.find("form").on("submit", function (event) {
-//         event.preventDefault();
-//         let searchName = searchContainer.find("#search").val();
-//         $.ajax({
-//             url: "/player/search?searchName=" + searchName,
-//             type: "GET",
-//             dataType: "json",
-//             success: function (response) {
-//                 console.log("update Success");
-//             }
-//         })
-//     })
-// })

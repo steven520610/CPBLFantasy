@@ -1,0 +1,134 @@
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: end;
+    align-items: center;
+}
+
+.container {
+    width: 80%;
+}
+
+/* 
+    header 
+*/
+.infoBar {
+    font-size: 40px;
+    font-weight: 900;
+    border-bottom: 3px solid #ddd;
+}
+
+.playerCards {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.freeAgent,
+.myPlayer {
+    width: 40%;
+    background: #ddd;
+    display: flex;
+    flex-direction: row;
+}
+
+/* 
+    main 
+    playersTable 
+*/
+thead tr {
+    background: #f6f9fc;
+}
+
+thead th {
+    padding-left: 1rem;
+    border: 1px solid #dddddd;
+}
+
+tbody td {
+    border: 1px solid #dddddd;
+}
+
+.playersTable {
+    font-size: 15px;
+}
+
+.span {
+    width: 5%;
+}
+
+.rankings {
+    text-align: right;
+}
+
+.type {
+    width: 30%;
+    text-align: center;
+}
+
+.lastHead {
+    border: 1px solid #dddddd;
+}
+
+th.drop,
+th.add {
+    padding-right: 1rem;
+}
+
+.drop,
+.add {
+    text-align: center;
+}
+
+.dropButton {
+    display: block;
+    font-size: 20px;
+    min-width: 40px;
+    max-width: 40px;
+    /* height: 30px;
+    line-height: 30px; */
+    background: #0084ff;
+    color: white;
+    border-radius: 70%;
+    position: relative;
+    left: 15%;
+    cursor: pointer;
+}
+
+.playerType {
+    width: 25%;
+}
+
+.roster {
+    width: 13%;
+    text-align: right;
+}
+
+.current {
+    text-align: right;
+}
+
+.stat {
+    width: 7%;
+    text-align: right;
+}
+
+.notselected {
+    display: none;
+}
+
+.playerInfo {
+    content: attr(data-content);
+    color: #000000;
+}
+
+.confirmContainer {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.confirmAdd,
+.confirmCancel {
+    margin: 0.2rem 0.5rem;
+}

@@ -75,6 +75,11 @@ thead tr {
 
 thead th {
     padding-left: 1rem;
+    border: 1px solid #dddddd;
+}
+
+tbody td {
+    border: 1px solid #dddddd;
 }
 
 .playersTable {
@@ -99,17 +104,20 @@ thead th {
 }
 
 .playerType {
-    width: 20%;
+    width: 25%;
 }
 
 .roster {
-    width: 15%;
+    width: 13%;
     text-align: right;
+}
+
+th.current {
+    cursor: pointer;
 }
 
 .current {
     text-align: right;
-    cursor: pointer;
 }
 
 th.stat {
@@ -134,6 +142,18 @@ th.stat {
     color: #000000;
 }
 
-.hide {
+.myPlayer {
+    color: #b61b1b;
+    text-decoration: none;
+    text-align: center;
+}
+
+.addable {
+    color: #26c320;
+    text-decoration: none;
+    text-align: center;
+}
+
+.notaddable {
     display: none;
 }

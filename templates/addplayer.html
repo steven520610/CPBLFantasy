@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{{ account }}</title>
+        <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
+        <link rel="icon" href="{{ url_for("static", filename="img/logo/{}.png".format(account)) }}">
+        <style>
+            .page {
+                flex: 1;
+                display: flex;
+                justify-content:center;
+            }
+        </style>
+        <link href="{{ url_for("static", filename="css/addplayer.css")}}" rel="stylesheet">
+    </head>
+
+    <body>
+        <div class="container app">
+            <header>
+                <div class="infoBar">Add Free Agent</div>
+                <div class="playerCards">
+                    <div class="freeAgent">
+                        <div class="headshot">
+                            <img :src="imagePathFA">
+                        </div>
+                        <div class="freeAgentInfo">
+                            <a :href="addPlayerURL(selectPlayerFA)">[[ selectPlayerFA.name ]]</a>
+                            <span class="playerInfo">[[ addPlayerInfo(selectPlayerFA) ]]</span>
+                        </div>
+                    </div>
+                    <div class="myPlayer" v-if="selectPlayerMy">
+                        <div class="headshot">
+                            <img :src="imagePathMy">
+                        </div>
+                        <div class="myPlayerInfo">
+                            <a :href="addPlayerURL(selectPlayerMy)">[[ selectPlayerMy.name ]]</a>
+                            <span class="playerInfo">[[ addPlayerInfo(selectPlayerMy) ]]</span>
+                        </div>
+                    </div>
+                        
+                </div>
+            </header>
+
+            <main>
+                <div>Player to Add</div>
+                <div class="FAContainer">
+                    <table class="FATable" v-if="isFielder(selectPlayerFA)">
+                        <thead>
+                            <tr>
+                                <th class="span" colspan="2"></th>
+                                <th class="rankings">Rankings</th>
+                                <th class="type" colspan="23">Batting</th>
+                            </tr>
+                            <tr class="lastHead">
+                                <th class="add">Add</th>
+                                <th class="playerType">Players</th>
+                                <th class="current"></th>
+                                <th class="stat">H/AB</th>
+                                <th v-for="category in categories['T_F']" 
+                                :class="isSelectedCategory(category, 'Fielder') ? 'stat' : 'notselected'">
+                                    [[ getCategoryTitle(category) ]]
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="add"></td>
+                                <td class="playerName">
+                                    <a :href="addPlayerURL(selectPlayerFA)" class="link" target="_blank">[[ selectPlayerFA.name ]]</a>
+                                    <span class="playerInfo">[[ addPlayerInfo(selectPlayerFA) ]]</span>
+                                </td>
+                                <td class="current">-</td>
+                                <td class="stat">[[ selectPlayerFA.H ]]/[[ selectPlayerFA.AB ]]</td>
+                                
+                                <td v-for="category in categories.T_F" :class="isSelectedCategory(category, 'Fielder') ? 'stat' : 'notselected' ">
+                                    [[ getCategoryValue(selectPlayerFA, category) ]]
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <table class="selectTable" v-else>
+                        <thead>
+                            <tr>
+                                <th class="span" colspan="2"></th>
+                                <th class="rankings">Rankings</th>
+                                <th class="type" colspan="23">Pitching</th>
+                            </tr>
+                            <tr class="lastHead">
+                                <th class="add">Add</th>
+                                <th class="playerType">Pitchers</th>
+                                <th class="current"></th>
+                                <th v-for="category in categories['T_P']" 
+                                :class="isSelectedCategory(category, 'Pitcher') ? 'stat' : 'notselected'">
+                                    [[ getCategoryTitle(category) ]]
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="add"></td>
+                                <td class="playerName">
+                                    <a :href="addPlayerURL(selectPlayerFA)" class="link" target="_blank">[[ selectPlayerFA.name ]]</a>
+                                    <span class="playerInfo">[[ addPlayerInfo(selectPlayerFA) ]]</span>
+                                </td>
+                                <td class="current">-</td>
+                                <td v-for="category in categories.T_P" :class="isSelectedCategory(category, 'Pitcher') ? 'stat' : 'notselected' ">
+                                    [[ getCategoryValue(selectPlayerFA, category) ]]
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div>Select a player to drop</div>
+                <div class="playersTable">
+                    <table class="fieldersTable" v-show="fieldersShow">
+                        <thead>
+                            <tr>
+                                <th class="span" colspan="2"></th>
+                                <th class="rankings">Rankings</th>
+                                <th class="type" colspan="23">Batting</th>
+                            </tr>
+                            <tr class="lastHead">
+                                <th class="drop">Drop</th>
+                                <th class="playerType">Players</th>
+                                <th class="current"></th>
+                                <th class="stat">H/AB</th>
+                                <th v-for="category in categories['T_F']" 
+                                :class="isSelectedCategory(category, 'Fielder') ? 'stat' : 'notselected'">
+                                    [[ getCategoryTitle(category) ]]
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="fielder in fielders" v-show="fielder.show">
+                                <td class="drop">
+                                    <span class="dropButton" @click="dropPlayer(fielder)" v-if="!selected">-</span>
+                                </td>
+                                <td class="playerName">
+                                    <a :href="addPlayerURL(fielder)" class="link" target="_blank">[[ fielder.name ]]</a>
+                                    <span class="playerInfo">[[ addPlayerInfo(fielder) ]]</span>
+                                </td>
+                                <td class="current">-</td>
+                                <td class="stat">[[ fielder.H ]]/[[ fielder.AB ]]</td>
+                                
+                                <td v-for="category in categories.T_F" :class="isSelectedCategory(category, 'Fielder') ? 'stat' : 'notselected' ">
+                                    [[ getCategoryValue(fielder, category) ]]
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <table class="pitchersTable" v-show="pitchersShow">
+                        <thead>
+                            <tr>
+                                <th class="span" colspan="2"></th>
+                                <th class="rankings">Rankings</th>
+                                <th class="type" colspan="23">Pitching</th>
+                            </tr>
+                            <tr class="lastHead">
+                                <th class="drop">Drop</th>
+                                <th class="playerType">Pitchers</th>
+                                <th class="current"></th>
+                                <th v-for="category in categories['T_P']" 
+                                :class="isSelectedCategory(category, 'Pitcher') ? 'stat' : 'notselected'">
+                                    [[ getCategoryTitle(category) ]]
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="pitcher in pitchers" v-show="pitcher.show">
+                                <td class="drop">
+                                    <span class="dropButton" @click="dropPlayer(pitcher)">-</span>
+                                </td>
+                                <td class="playerName">
+                                    <a :href="addPlayerURL(pitcher)" class="link" target="_blank">[[ pitcher.name ]]</a>
+                                    <span class="playerInfo">[[ addPlayerInfo(pitcher) ]]</span>
+                                </td>
+                                <td class="current">-</td>
+                                
+                                <td v-for="category in categories.T_P" :class="isSelectedCategory(category, 'Pitcher') ? 'stat' : 'notselected' ">
+                                    [[ getCategoryValue(pitcher, category) ]]
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="confirmContainer" v-show="confirmMessage">
+                    <div class="confirmAdd">
+                        <form action={{ url_for("myteam") }} method="POST">
+                            <input type="hidden" name="account" value={{ account }}>
+                            <input type="hidden" name="addPlayer" :value="selectPlayerFA.player_id">
+                            <input type="hidden" name="addPlayerType" :value="selectPlayerFAType">
+                            <input type="hidden" name="dropPlayer" v-if="selectPlayerMy" :value="selectPlayerMy.player_id">
+                            <input type="hidden" name="dropPlayerType" :value="selectPlayerMyType">
+                            <input type="submit" class="btn btn-primary" :value="confirmMessage">
+                        </form>
+                    </div>
+
+                    <div class="confirmCancel">
+                        <form action={{ url_for("player") }} method="POST">
+                            <input type="hidden" name="account" value={{ account }}>
+                            <input type="submit" class="btn btn-primary" value="Cancel">
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+    <script src={{url_for("static", filename="js/jQuery.js")}}></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+    <script>
+        let account = {{ account|tojson }};
+        let categories = {{ categories|tojson }};
+        let fielders = {{ fielders|tojson }};
+        let pitchers = {{ pitchers|tojson }};
+        let selectPlayerFA = {{ selectPlayerFA|tojson }}
+    </script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src={{ url_for("static", filename="js/addplayer.js") }}></script>
+    </body>
+</html>
