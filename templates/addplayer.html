@@ -171,7 +171,7 @@
                         <tbody>
                             <tr v-for="pitcher in pitchers" v-show="pitcher.show">
                                 <td class="drop">
-                                    <span class="dropButton" @click="dropPlayer(pitcher)">-</span>
+                                    <span class="dropButton" @click="dropPlayer(pitcher)" v-if="!selected">-</span>
                                 </td>
                                 <td class="playerName">
                                     <a :href="addPlayerURL(pitcher)" class="link" target="_blank">[[ pitcher.name ]]</a>

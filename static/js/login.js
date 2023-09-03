@@ -1,5 +1,8 @@
 $(document).ready(function () {
     $("#login").click(function (e) {
+        /* 防止form的提交行為，在html是設定成提交到 
+           同樣是自己的login.html內
+        */
         e.preventDefault()
         let account = $("#account").val();
         let password = $("#password").val();

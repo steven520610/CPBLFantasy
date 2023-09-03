@@ -56,7 +56,7 @@
                     <div id="filterContainer">
                         <div class="filter" v-show="statusShow">
                             <label for="status" class="label">Status</label>
-                            <select v-model="statusSelected">
+                            <select v-model="statusSelected" id="status">
                                 <option value="ALL">All Players</option>
                                 <option value="FAO">Free Agents Only</option>
                                 <option value="ATP">All Taken Players</option>
@@ -67,7 +67,7 @@
                         </div>
                         <div class="filter" v-show="positionShow">
                             <label for="position" class="label">Position</label>
-                            <select v-model="positionSelected">
+                            <select v-model="positionSelected" id="position">
                                 <option value="AB">All Batters</option>
                                 <option value="AP">All Pitchers</option>
                                 <option value="C">C</option>
@@ -83,7 +83,7 @@
                         </div>
                         <div class="filter" v-show="statsShow">
                             <label for="stats" class="label">Stats</label>
-                            <select v-model="statsSelected">
+                            <select v-model="statsSelected" id="stats">
                                 <option value="ST">Season Total</option>
                             </select>
                         </div>

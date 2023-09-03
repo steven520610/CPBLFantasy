@@ -47,13 +47,14 @@ def create_app():
 
 
 app = create_app()
-metadata = MetaData()
-engine = create_engine(app.config["SQLALCHEMY_DATABASE_URI"])
+# 建立SocketIO object
 socketio = SocketIO(app, cors_allowed_origins="http://127.0.0.1:5000")
 
 # Core
 # 把從db抓取Table的步驟在一開始就執行
 # 這樣不用每個路由都重抓一次
+metadata = MetaData()
+engine = create_engine(app.config["SQLALCHEMY_DATABASE_URI"])
 accountTable = Table("Account", metadata, autoload_with=engine)
 fielderTable = Table("Fielder", metadata, autoload_with=engine)
 pitcherTable = Table("Pitcher", metadata, autoload_with=engine)
@@ -72,6 +73,7 @@ positionDict = {
 }
 
 
+# SQLAlchemy ORM
 class Account(db.Model):
     # 若無設定，預設的table name會被轉成小寫的account
     __tablename__ = "Account"
@@ -80,15 +82,6 @@ class Account(db.Model):
     password = db.Column(db.String(100), nullable=False)
     team = db.Column(db.String(100), nullable=True)
     opponent = db.Column(db.String(100), nullable=True)
-
-    def __init__(self, account, password, team, opponent):
-        self.account = account
-        self.password = password
-        self.team = team
-        self.opponent = opponent
-
-    def __repr__(self):
-        return "您的ID為{}, 帳號為{}".format(self.id, self.account)
 
 
 class Fielder(db.Model):
@@ -123,68 +116,6 @@ class Fielder(db.Model):
     Account = db.Column(db.String(100))
     position = db.Column(db.String(100))
     round = db.Column(db.Integer)
-
-    def __init__(
-        self,
-        player_id,
-        name,
-        team,
-        PA,
-        AB,
-        RBI,
-        R,
-        H,
-        H1,
-        H2,
-        H3,
-        HR,
-        TB,
-        K,
-        SB,
-        OBP,
-        SLG,
-        AVG,
-        DP,
-        BUNT,
-        SF,
-        BB,
-        IBB,
-        HBP,
-        CS,
-        OPS,
-        Account,
-        position,
-        round,
-    ):
-        self.player_id = player_id
-        self.name = name
-        self.team = team
-        self.PA = PA
-        self.AB = AB
-        self.RBI = RBI
-        self.R = R
-        self.H = H
-        self.H1 = H1
-        self.H2 = H2
-        self.H3 = H3
-        self.HR = HR
-        self.TB = TB
-        self.K = K
-        self.SB = SB
-        self.OBP = OBP
-        self.SLG = SLG
-        self.AVG = AVG
-        self.DP = DP
-        self.BUNT = BUNT
-        self.SF = SF
-        self.BB = BB
-        self.IBB = IBB
-        self.HBP = HBP
-        self.CS = CS
-        self.OPS = OPS
-        self.Account = Account
-        self.position = position
-        self.round = round
 
     def to_dict(self, stats):
         return_dict = {
@@ -231,60 +162,6 @@ class Pitcher(db.Model):
     position = db.Column(db.String(100))
     round = db.Column(db.Integer)
 
-    def __init__(
-        self,
-        player_id,
-        name,
-        team,
-        APP,
-        W,
-        L,
-        SV,
-        BSV,
-        HLD,
-        SV_H,
-        IP,
-        WHIP,
-        ERA,
-        H,
-        HR,
-        BB,
-        HBP,
-        K,
-        R,
-        ER,
-        K9,
-        QS,
-        Account,
-        position,
-        round,
-    ):
-        self.player_id = player_id
-        self.name = name
-        self.team = team
-        self.APP = APP
-        self.W = W
-        self.L = L
-        self.SV = SV
-        self.BSV = BSV
-        self.HLD = HLD
-        self.SV_H = SV_H
-        self.IP = IP
-        self.WHIP = WHIP
-        self.ERA = ERA
-        self.H = H
-        self.HR = HR
-        self.BB = BB
-        self.HBP = HBP
-        self.K = K
-        self.R = R
-        self.ER = ER
-        self.K9 = K9
-        self.QS = QS
-        self.Account = Account
-        self.position = position
-        self.round = round
-
     def to_dict(self, stats):
         return_dict = {
             "player_ID": self.player_id,
@@ -321,16 +198,22 @@ class Pitcher(db.Model):
 
 
 # 一啟動或重啟server時，就先對每個帳號做排序
-# 然而因為是在server一起動就要處理，還沒有收到任何user端送來的請求
+# 然而因為是在server一啟動就要處理，還沒有收到任何user端送來的請求
 # 也就是一啟動時，並不在任何的上下文(路由)中
 # 因此需要透過這個方法，手動建立一個上下文
 # 否則會報RunTime Error
 
 # global要用的function也放這
 with app.app_context():
+    # 因為當初爬蟲爬取球員資料時
+    # 是依據隊伍的順序從上爬下來
+    # 所以db內球員的順序預設就會以隊伍來做排序
+    # 造成select時，也會以隊伍順序從上排下來
+    # 造成該守位不一定會對應到符合的球員
 
+    # 因此需要對該帳號所選的球員
+    # 根據守位重新排列
     def rearrangePlayer(account):
-        # 從db的Fielder, Pitcher Table抓出此帳號所選的球員
         queryFielders = (
             db.session.query(Fielder).filter(Fielder.Account == account).all()
         )
@@ -339,6 +222,7 @@ with app.app_context():
         )
 
         # 宣告有多個該守位的格子已被使用幾個、最多使用幾個
+        # 會需要根據不同聯盟、不同管理員設定Roster以及守位的數量去做更動
         Used = {
             "OF": {"Count": 0, "Limit": 4},
             "SP": {"Count": 0, "Limit": 4},
@@ -348,47 +232,58 @@ with app.app_context():
 
         # Fielder
         # 宣告一個用來存調整順序後的球員陣列
-        rearrangeQueryFielders = [False] * 11
+        # 長度會等於positionDict對應到球員種類的陣列長度
 
-        # 先賦予每個球員 "是否已經被分配守位" 這個屬性
+        # 每個element最後若非False
+        # 會是一個ORM Model的instance
+
+        # 因為Fielder和Pitcher在db裡面分開存
+        # 所以這邊也分開處理
+        rearrangeQueryFielders = [False] * len(positionDict["Fielder"])
+
+        # 先額外賦予每個instance "是否已經被分配守位" 這個屬性
         for queryFielder in queryFielders:
             queryFielder.assignPosition = False
 
-        # 宣告當前取的fielder、守位、BN起始對應的索引值
+        # 設定當前的fielder、守位
+        # 起始的索引值
         fielderIndex = 0
         positionIndex = 0
 
         # 宣告決定程式流程的一些Bool變數，分別是：
         # 決定所選球員內，是否擁有多守位的球員
         # 決定排序時是否在第一輪(略過多守位球員的情況)
-        # 決定Util格子是否被任一球員使用
         hasMultiPosition = False
         firstRound = True
 
         while fielderIndex < len(queryFielders) or hasMultiPosition:
-            # 第一輪，先略過多守位球員
+            # 第一輪
             if firstRound:
                 # 多守位球員會以 ", " 被隔開多個守位
+                # 會先略過多守位球員
                 if len(queryFielders[fielderIndex].position.split(", ")) > 1:
                     fielderIndex += 1
+
+                    # 只要有任一球員是多守位就會設定
                     hasMultiPosition = True
                     # 最後一個球員被選到後就會重新開始while loop
                     if fielderIndex == len(queryFielders):
                         firstRound = False
                         fielderIndex = 0
                     continue
-                # 指定守位到對應格子
 
-                # 從第一個守位開始選起，遇到符合的守位，且該守位目前尚無人使用的話
-                # 就會跳出此回圈
+                # 第一輪中的非多守位球員
+
+                # 從第一個守位開始選起，遇到符合的守位且該守位目前尚無人使用的話
+                # 就會跳出此for回圈
                 for position in positionDict["Fielder"]:
                     if queryFielders[fielderIndex].position == position:
                         positionIndex = positionDict["Fielder"].index(position)
 
-                        # 遇到該守位有多個格子的情況
+                        # 若該守位有多個格子的情況
                         if position in Used.keys():
+                            # 會先確定有多個格子的守位已經被使用幾個
                             positionIndex += Used[position]["Count"]
-                            # 如果該多格子的守位尚未使用完的情況
                             # 如果使用完的話就會往後，將此球員放到Util或BN
                             if (
                                 positionIndex
@@ -401,6 +296,11 @@ with app.app_context():
                                     ] = queryFielders[fielderIndex]
                                     queryFielders[fielderIndex].assignPosition = True
                                     Used[position]["Count"] += 1
+
+                                    # 該球員只要某個守位被設定完後
+                                    # 就可以跳出for loop
+                                    # 不用再檢查剩餘的守位了
+                                    # (這邊的剩餘守位是指positionDict中的守位)
                                     break
 
                         # 只有單一格子
@@ -412,8 +312,8 @@ with app.app_context():
                                 queryFielders[fielderIndex].assignPosition = True
                                 break
 
-                # 在所有守位都檢查完或是該球員已經被分配到格子的情況
-                # Util所有球員都能放
+                # 在所有守位都檢查完而且該球員還沒被分配到格子的情況
+                # 就會查看Util格有沒有位置
                 if (
                     not queryFielders[fielderIndex].assignPosition
                     and Used["Util"]["Count"] < 2
@@ -424,9 +324,10 @@ with app.app_context():
                     Used["Util"]["Count"] += 1
                     queryFielders[fielderIndex].assignPosition = True
 
-                # 所有守位(含Util)都判斷完，但該球員依舊沒有被分配到格子
-                # -> BN
+                # 所有守位以及Util都判斷完，但該球員依舊沒有被分配到格子
+                # 就會被分到BN格子
                 if not queryFielders[fielderIndex].assignPosition:
+                    # 每個BN格子都會讓list新增一個element
                     rearrangeQueryFielders.append(False)
                     rearrangeQueryFielders[-1] = queryFielders[fielderIndex]
                     queryFielders[fielderIndex].assignPosition = True
@@ -504,7 +405,7 @@ with app.app_context():
         rearrangeDict[account]["Fielders"] = rearrangeQueryFielders
 
         # Pitcher
-        rearrangeQueryPitchers = [False] * len(queryPitchers)
+        rearrangeQueryPitchers = [False] * len(positionDict["Pitcher"])
         # 先賦予每個球員 "是否被分配守位" 這個屬性
         for queryPitcher in queryPitchers:
             queryPitcher.assignPosition = False
@@ -512,7 +413,7 @@ with app.app_context():
         positionIndex = 0
         hasMultiPosition = False
         firstRound = True
-        BNIndex = 8
+
         while pitcherIndex < len(queryPitchers) or hasMultiPosition:
             # 第一輪，先略過多守位球員
             if firstRound:
@@ -543,9 +444,9 @@ with app.app_context():
                             break
 
                 if not queryPitchers[pitcherIndex].assignPosition:
-                    rearrangeQueryPitchers[BNIndex] = queryPitchers[pitcherIndex]
+                    rearrangeQueryPitchers.append(False)
+                    rearrangeQueryPitchers[-1] = queryPitchers[pitcherIndex]
                     queryPitchers[pitcherIndex].assignPosition = True
-                    BNIndex += 1
 
                 pitcherIndex += 1
                 if pitcherIndex == len(queryPitchers):
@@ -562,7 +463,7 @@ with app.app_context():
                         for position in positionDict["Pitcher"]:
                             if playerPosition == position:
                                 positionIndex = positionDict["Pitcher"].index(position)
-                                positionIndex += Used[position]
+                                positionIndex += Used[position]["Count"]
 
                                 if (
                                     positionIndex
@@ -582,9 +483,9 @@ with app.app_context():
                             break
 
                     if not queryPitchers[pitcherIndex].assignPosition:
-                        rearrangeQueryPitchers[BNIndex] = queryPitchers[pitcherIndex]
+                        rearrangeQueryPitchers.append(False)
+                        rearrangeQueryPitchers[-1] = queryPitchers[pitcherIndex]
                         queryPitchers[pitcherIndex].assignPosition = True
-                        BNIndex += 1
 
                 pitcherIndex += 1
 
@@ -629,37 +530,33 @@ def sql():
 # 首頁
 @app.route("/home")
 def home():
-    query = request.args.get("test", None)
-    if query:
-        return "別亂輸入query!"
-    else:
-        if "id" in session:
-            return redirect(url_for("myleague", id=session["id"]))
-        return render_template("home.html")
-
-
-def login_check(account, password):
-    query = db.session.query(Account).filter(Account.account == account).first()
-    # 帳號不存在
-    if not query:
-        return False
-
-    # 確認密碼正確與否
-    if check_password_hash(query.password, password):
-        return True
-    else:
-        return False
+    if "id" in session:
+        return redirect(url_for("myleague", id=session["id"]))
+    return render_template("home.html")
 
 
 # 登入頁面
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    def login_check(account, password):
+        query = db.session.query(Account).filter(Account.account == account).first()
+        # 帳號不存在
+        if not query:
+            return False
+
+        # 確認密碼正確與否
+        if check_password_hash(query.password, password):
+            return True
+        else:
+            return False
+
     if request.method == "POST":
         received = request.get_json()
         account = received["account"]
         password = received["password"]
 
         if login_check(account, password):
+            # 根據帳號不同，決定要重定向到哪個路由
             if account == "admin":
                 return jsonify(
                     {"redirect": url_for("manager"), "success": True, "admin": True}
@@ -701,6 +598,9 @@ def register():
             return render_template("register.html", message="此帳號已存在！")
         else:
             if "team" not in received:
+                # 一開始新增帳號是不會馬上新增對手
+                # 之後手動更新或是另外用一個演算法
+                # 更新每一週對手的更動
                 new_account = Account(
                     account, generate_password_hash(password, "sha256"), None, "TBD"
                 )
@@ -734,6 +634,10 @@ def manager():
 
             # Fielder
             fielder_columns = [
+                # 這邊都是sqlalchemy的Core功能
+                # 所提供的class
+                # 與利用 db = SQLAlchemy()中
+                # db.Column不同
                 Column("db_id", Integer, primary_key=True),
                 Column("player_id", Integer),
                 Column("name", String(255)),
@@ -803,9 +707,12 @@ def manager():
             # 將定義好的Fielder, Pitcher Table加入db內
             metadata.create_all(engine, [fielder, pitcher])
 
+            # 取出管理員選擇的Fielder, Pitcher比項
             fielder_categories = request.form.getlist("Batting")
             pitcher_categories = request.form.getlist("Pitching")
 
+            # 把選擇的比項寫成一個檔案
+            # 以便之後讀取的時候直接讀檔案就好
             path = "categories.txt"
             with open(path, "w") as file:
                 file.write("Fielders\n")
@@ -825,6 +732,10 @@ def manager():
 # 聯盟首頁
 @app.route("/league_home/<int:id>", methods=["GET", "POST"])
 def myleague(id):
+    # 目前的方法透過在URL切換不同的id就可以切換不同帳號
+    # 實務上在登入後建立session來存，檢查session內有無此網頁中保存的資料
+    # 有的話代表登入過，確認是本人
+    # 沒有的話就不能這樣透過URL輸入id來進入此網頁
     if "id" not in session:
         return redirect(url_for("login"))
     query = db.session.query(Account).filter(Account.id == id).first()
@@ -833,11 +744,49 @@ def myleague(id):
     return render_template("myleague.html", account=account, team=team)
 
 
+# 為了在jinja2內使用isinstance這個功能
+# 需要加上的地方
+@app.template_filter("isinstance")
+def isinstance_filter(obj, class_name):
+    if class_name == "Fielder":
+        return isinstance(obj, Fielder)
+    elif class_name == "Pitcher":
+        return isinstance(obj, Pitcher)
+    else:
+        import builtins
+
+        type_fn = getattr(builtins, class_name, None)
+        return isinstance(obj, type_fn)
+
+
+@app.context_processor
+def utility_processor():
+    def get_attribute(obj, attr):
+        return getattr(obj, attr)
+
+    def get_min(playersCount):
+        min = 99
+        for key, value in playersCount.items():
+            if value < min:
+                min = value
+        return min
+
+    def get_max(playersCount):
+        max = 0
+        for key, value in playersCount.items():
+            if value > max:
+                max = value
+        return max
+
+    return dict(get_attribute=get_attribute, get_min=get_min, get_max=get_max)
+
+
 # 球員頁面
 @app.route("/myteam", methods=["GET", "POST"])
 def myteam():
     global rearrangeDict
     account = request.form["account"]
+    # addplayer路由中，表單才會傳下面這些資料
     try:
         addPlayerID = int(request.form["addPlayer"])
         addPlayerType = request.form["addPlayerType"]
@@ -899,14 +848,18 @@ def myteam():
         tableExist = False
     else:
         tableExist = True
+        # Core
         TodayFielder = Table("TodayFielder", metadata, autoload_with=engine)
         TodayPitcher = Table("TodayPitcher", metadata, autoload_with=engine)
 
     for fielder in rearrangeDict[account]["Fielders"]:
+        # rearrange中，有可能該格子沒辦法放目前所選的球員
+        # 該element的值會是False
         if not fielder:
             existedFieldersStats.append(False)
             continue
         # 如果紀錄今日成績的Table不存在，可確定該球員也一定不會有今日出賽的紀錄
+        # 對Fielder instance加上一個額外的屬性
         if not tableExist:
             fielder.inlineup = False
         else:
@@ -931,7 +884,9 @@ def myteam():
                     # 該球員成績紀錄完後，加入前面所宣告的
                     # 該帳號所擁有球員的所有成績
                     existedFieldersStats.append(existedFielderStats)
+
         # 調整有些球員id為二位數or三位數的情況，因為db內是以integer的方式儲存
+        # 目的是要讓後面用超連結連到CPBL官網球員頁面時使用
         fielder.player_id = str(fielder.player_id).rjust(4, "0")
 
     for pitcher in rearrangeDict[account]["Pitchers"]:
@@ -995,7 +950,6 @@ def myteamUpdate():
                 receiveData["active"]["index"]
             ],
         )
-        # print(rearrangeQueryFielders)
     else:
         (
             rearrangeDict[receiveData["account"]]["Pitchers"][
@@ -1012,7 +966,6 @@ def myteamUpdate():
                 receiveData["active"]["index"]
             ],
         )
-        # print(rearrangeQueryPitchers)
     rearrangeDict[receiveData["account"]]["rearrange"] = True
     return jsonify({"message": "Success"})
 
@@ -1076,7 +1029,6 @@ def background_update():
 
                         socketio.emit("update", emit_json, namespace="/matchup")
 
-                    # print("Update Success!")
         finally:
             background_task.release()
 
@@ -1239,7 +1191,6 @@ def matchup():
             count += 1
         PitchersStats[key] = existed_pitchers_stats
         PitchersCount[key] = count
-    print(PitchersStats["opp"])
 
     return render_template(
         "matchup.html",
@@ -1280,43 +1231,6 @@ def matchup_disconnect():
         print("All pages disconnected.")
     current_clients.pop()
     print(current_clients)
-
-
-# 為了在jinja2內使用isinstance這個功能
-# 需要加上的地方
-@app.template_filter("isinstance")
-def isinstance_filter(obj, class_name):
-    if class_name == "Fielder":
-        return isinstance(obj, Fielder)
-    elif class_name == "Pitcher":
-        return isinstance(obj, Pitcher)
-    else:
-        import builtins
-
-        type_fn = getattr(builtins, class_name, None)
-        return isinstance(obj, type_fn)
-
-
-@app.context_processor
-def utility_processor():
-    def get_attribute(obj, attr):
-        return getattr(obj, attr)
-
-    def get_min(playersCount):
-        min = 99
-        for key, value in playersCount.items():
-            if value < min:
-                min = value
-        return min
-
-    def get_max(playersCount):
-        max = 0
-        for key, value in playersCount.items():
-            if value > max:
-                max = value
-        return max
-
-    return dict(get_attribute=get_attribute, get_min=get_min, get_max=get_max)
 
 
 # 選秀頁面
@@ -1430,7 +1344,6 @@ def draftTimer(auto):
 def draftupdate(data):
     if data["auto"]:
         socketio.sleep(1)
-    print(data)
     try:
         if data["HR_fielder"]:
             query = (
@@ -2180,6 +2093,17 @@ def todayupdate():
                                 todayTotal[WeeklyColumn["name"]] = todayTotal[
                                     WeeklyColumn["name"]
                                 ] + getattr(SelectAccount, WeeklyColumn["name"])
+
+                                # 最後該帳號的
+                                # 當日總成績和當週成績的IP做相加時
+                                # 要再處理一次
+                                if WeeklyColumn["name"] == "IP":
+                                    integer = int(todayTotal["IP"])
+                                    decimal = todayTotal["IP"] - integer
+                                    if decimal * 10 >= 3:
+                                        integer += 1
+                                        decimal -= 0.3
+                                    todayTotal["IP"] = integer + decimal
 
                             # 因為這邊又把本日成績和本週原始成績做相加的動作
                             # 所以那些不能加的欄位要再重新計算一次

@@ -1,7 +1,6 @@
 $(document).ready(function () {
     const date = new Date();
     dateString = date.toLocaleDateString();
-    // dateString = dateString.slice(0, 10);
     $("#date h1").text(dateString);
 
     const socket = io("http://127.0.0.1:5000/myteam");
@@ -60,7 +59,7 @@ $(document).ready(function () {
     //  所有自己選的Fielder, Pitcher
     let fielders = $("#fielderTable tbody tr");
     let pitchers = $("#pitcherTable tbody tr");
-    console.log(fielders);
+
     /*
     =================================
     處理剛載入網頁後
@@ -84,11 +83,14 @@ $(document).ready(function () {
         fielders.each(function () {
             // 只要有一個不是-/-，Total就會有值
             if ($(this).children().eq(2).text() == "-/-") {
+                // for loop中的continue
                 return true;
             }
             else if ($(this).children().eq(1).text() == "Starting Lineup Totals") {
+                // for loop中的break
                 return false;
             }
+            // 只要此球員有任何數據在今日成績的Table
             for (let i = 0; i < cateTotalFielder.length; i++) {
                 $(this).removeClass("editable");
                 $(this).find(".positionButton").removeClass("positionButton");
@@ -110,7 +112,9 @@ $(document).ready(function () {
                 if (i == 0) {
                     totalFielder.children().eq(i + 2).text("-/-");
                 }
-                totalFielder.children().eq(i + 2).text("-");
+                else {
+                    totalFielder.children().eq(i + 2).text("-");
+                }
             }
         }
         // 有資料
@@ -284,23 +288,31 @@ $(document).ready(function () {
         e2.find(".positionButton").text(e1Position);
 
         if (type == "Fielder") {
-            if (e1.index() >= 10) {
+            if (e1.index() >= 11) {
                 e1.addClass("bench");
-                e2.removeClass("bench");
+                if (e2.index() < 11) {
+                    e2.removeClass("bench");
+                }
             }
-            else if (e2.index() >= 10) {
-                e1.removeClass("bench");
+            else if (e2.index() >= 11) {
                 e2.addClass("bench");
+                if (e1.index() < 11) {
+                    e1.removeClass("bench");
+                }
             }
         }
         else if (type == "Pitcher") {
-            if (e1.index() >= 6) {
+            if (e1.index() >= 8) {
                 e1.addClass("bench");
-                e2.removeClass("bench");
+                if (e2.index() < 8) {
+                    e2.removeClass("bench");
+                }
             }
-            else if (e2.index() >= 6) {
-                e1.removeClass("bench");
+            else if (e2.index() >= 8) {
                 e2.addClass("bench");
+                if (e1.index() < 8) {
+                    e1.removeClass("bench");
+                }
             }
         }
 
@@ -317,7 +329,6 @@ $(document).ready(function () {
         // 為點擊的球員，增加一個class
         clickPlayer.addClass("swapactive");
 
-        console.log($("#message").attr("value"));
         // 宣告後面傳送AJAX請求時要傳送的資料
         let sendData = {
             "account": account,
@@ -337,6 +348,7 @@ $(document).ready(function () {
 
             // 判斷每個球員的每個守位
             let rowPosition = row.find(".playerInfo").text().trim().split(" - ")[1].split(", ");
+            let shouldBreak = false;
             for (let i = 0; i < activePosition.length; i++) {
                 for (let j = 0; j < rowPosition.length; j++) {
                     if ((row.find(".positionButton").text() == activePosition[i] ||
@@ -348,7 +360,11 @@ $(document).ready(function () {
                         )) {
                         // 為符合的球員，新增一個class
                         row.addClass("swaptarget");
+                        break;
                     }
+                }
+                if (shouldBreak) {
+                    break;
                 }
             }
             // 加入最後一列的BN
@@ -419,7 +435,7 @@ $(document).ready(function () {
             $("#fielderTable .editable").removeAttr("style").off("mouseleave").on("click", handleEditableFielder);
         });
 
-        // 處理點擊後，經過判斷後無法與所點選球員做交換的球員
+        // 處理點擊後，經過判斷無法與所點選球員做交換的球員
         $("#fielderTable .editable").not(".swapactive, .swaptarget").css({
             "opacity": "0.3",
             "cursor": "default"

@@ -149,7 +149,6 @@ tbody .type {
 }
 
 .playerInfo {
-    content: attr(data-content);
     color: #000000;
 }
 

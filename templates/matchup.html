@@ -162,12 +162,11 @@
                         </tr>
                     </thead>
 
-
                     <tbody>
                         {% set ns = namespace(myFielderIndex=0, oppFielderIndex=0) %}
                         {% for i in range(get_max(FieldersCount)) %}
                             <tr>
-                                {% if FieldersCount["my"] > FieldersCount["opp"] %}
+                                {% if FieldersCount["my"] >= FieldersCount["opp"] %}
                                     <!--兩邊都有球員的情況-->
                                     {% if i < FieldersCount["opp"] %}
                                         <td class="type player">
@@ -225,7 +224,7 @@
                                         {% if i < 11 %}
                                             <td class="position">{{ RosterPositions["Fielder"][i] }}</td>
                                         {% else %}
-                                            <td class="position">BN</td>
+                                            <td class="position bench">BN</td>
                                         {% endif %}
 
                                         <!--opponent-->
@@ -413,7 +412,7 @@
                                         {% if i < 11 %}
                                             <td class="position">{{ RosterPositions["Fielder"][i] }}</td>
                                         {% else %}
-                                            <td class="position">BN</td>
+                                            <td class="position bench">BN</td>
                                         {% endif %}
 
                                         <!--opponent-->
@@ -618,7 +617,7 @@
                         {% set ns = namespace(myPitcherIndex=0, oppPitcherIndex=0) %}
                         {% for i in range(get_max(PitchersCount)) %}
                             <tr>
-                                {% if PitchersCount["my"] > PitchersCount["opp"] %}
+                                {% if PitchersCount["my"] >= PitchersCount["opp"] %}
                                     <!--兩邊都有球員的情況-->
                                     {% if i < PitchersCount["opp"] %}
                                         <td class="type player">

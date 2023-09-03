@@ -6,14 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href={{url_for("static",filename="css/myteam.css")}} rel="stylesheet">
     <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" rel="stylesheet">
+    <link href="{{ url_for("static", filename="img/logo/{}.png".format(account)) }}" rel="icon">
     <title>{{ account }}</title>
-    <link rel="icon" href="{{ url_for("static", filename="img/logo/{}.png".format(account)) }}">
-    <script src={{url_for("static", filename="js/jQuery.js")}}></script>
+    <script src={{ url_for("static", filename="js/jQuery.js") }}></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
     <script src={{ url_for("static", filename="js/socket.io.min.js") }}></script>
     <script src={{ url_for("static", filename="js/socket.io.min.js.map") }}></script>
-    <script src={{ url_for("static", filename="js/myteam.js")}}></script>
+    <script src={{ url_for("static", filename="js/myteam.js") }}></script>
 </head>
 
 <body>
@@ -76,32 +76,9 @@
                         {% set ns = namespace(fielder_index=0, position_index=0) %}
 
                         {% for fielder in fielders %}
-                            {% if not fielder %}
+                            {% if fielder %}
                                 <tr class="editable">
-                                    {% if ns.position_index < 11 %}
-                                        <td class="position">
-                                            <span class="positionButton">{{ positionDict["Fielder"][ns.position_index] }}</span>
-                                        </td>
-                                        {% set ns.position_index = ns.position_index + 1 %}
-                                    {% else %}
-                                        <td class="position">
-                                            <span class="positionButton">BN</span>
-                                        </td>
-                                    {% endif %}
-                                    <td class="type player">(Empty)</td>
-                                    <td class="stat first"></td>
-                                    {% for T_fielder_category in totalFielderCategories %}
-                                        {% if T_fielder_category in selectFielderCategories %}
-                                            <td class="stat"></td>
-                                        {% else %}
-                                            <td class="notselected"></td>
-                                        {% endif %}
-                                    {% endfor %}
-                                    {% set ns.fielder_index = ns.fielder_index + 1 %}
-                                    <td class="empty"></td>
-                                </tr>
-                            {% else %}
-                                <tr class="editable">
+                                    {# 超過11就會是BN #}
                                     {% if ns.position_index < 11 %}
                                         <td class="position">
                                                 <span class="positionButton">{{ positionDict["Fielder"][ns.position_index] }}</span>
@@ -156,6 +133,30 @@
                                         {% endfor %}
                                         {% set ns.fielder_index = ns.fielder_index + 1 %}
                                     {% endif %}
+                                    <td class="empty"></td>
+                                </tr>
+                            {% else %}
+                                <tr class="editable">
+                                    {% if ns.position_index < 11 %}
+                                        <td class="position">
+                                            <span class="positionButton">{{ positionDict["Fielder"][ns.position_index] }}</span>
+                                        </td>
+                                        {% set ns.position_index = ns.position_index + 1 %}
+                                    {% else %}
+                                        <td class="position">
+                                            <span class="positionButton">BN</span>
+                                        </td>
+                                    {% endif %}
+                                    <td class="type player">(Empty)</td>
+                                    <td class="stat first"></td>
+                                    {% for T_fielder_category in totalFielderCategories %}
+                                        {% if T_fielder_category in selectFielderCategories %}
+                                            <td class="stat"></td>
+                                        {% else %}
+                                            <td class="notselected"></td>
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% set ns.fielder_index = ns.fielder_index + 1 %}
                                     <td class="empty"></td>
                                 </tr>
                             {% endif %}

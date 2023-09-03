@@ -7,7 +7,6 @@
     <script>
         $(document).ready(function() {
             $("#submit").click(function(e) {
-                console.log(!$("#confirm").prop("checked"));
                 if (!$("#confirm").prop("checked")) {
                     e.preventDefault();
                     alert("請勾選我同意！");

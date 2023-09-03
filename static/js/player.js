@@ -30,6 +30,10 @@ const app = Vue.createApp({
     },
     methods: {
         search() {
+            // 先都設成不顯示
+            // 接下來才根據user的選擇
+            // 決定要顯示哪個table
+
             this.fieldersShow = false;
             this.fielders.forEach(fielder => {
                 if (fielder.name.includes(this.searchName)) {
@@ -101,6 +105,8 @@ const app = Vue.createApp({
                         else { pitcher.show = false; }
                     })
                     break;
+
+                // 選到Account
                 case this.statusSelected:
                     this.fielders.forEach(fielder => {
                         if (fielder.Account == this.statusSelected) { fielder.show = true; }
@@ -129,6 +135,7 @@ const app = Vue.createApp({
                 this.pitchersShow = false;
 
                 this.fielders.forEach(fielder => {
+                    // 這邊還要考慮到前面status所filter出來的球員
                     if (fielder.position.includes(this.positionSelected) && fielder.show) { fielder.show = true; }
                     else { fielder.show = false; }
                 });

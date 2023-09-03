@@ -45,7 +45,8 @@ def update_K9(IP, K):
         return 0
 
 
-# 載入爬蟲程式
+# 爬取球員目前的整季成績
+# 到Fielder, Pitcher Table
 def load():
     """
     從球員點將錄中前往各個球員的頁面
@@ -297,6 +298,7 @@ def load():
             crawl_stats(driver2, href)
 
 
+# 爬取成績看板中，今日比賽中的球員成績
 def crawl_live():
     def crawl():
         TodayFielder = Table("TodayFielder", db, autoload_with=engine)

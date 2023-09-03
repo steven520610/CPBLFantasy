@@ -87,7 +87,8 @@ $(document).ready(function () {
     //#endregion
 
 
-    //#region 處理一加載完網頁，就需要優先加上的CSS。此處為playersTable的第一列、account bar的第一個玩家
+    //#region 處理一加載完網頁，就需要優先加上的CSS。
+    // 此處為playersTable的第一列、account bar的第一個玩家
     $("#playersTable tbody").children().first().addClass("selected");
     $(".round").first().children().first().addClass("turn");
     login = $("#login").text();
@@ -501,8 +502,8 @@ $(document).ready(function () {
                 fielderRows = $("#teamsTable tbody").eq(0).children();
                 pitcherRows = $("#teamsTable tbody").eq(1).children();
 
-                let fielderBn = 9;
-                let pitcherBn = 6;
+                let fielderBn = 11;
+                let pitcherBn = 8;
 
                 let nextLoop = false;
 

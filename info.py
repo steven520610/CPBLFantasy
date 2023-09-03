@@ -172,6 +172,7 @@ def read_category():
     """
     fielder_categories, pitcher_categories = [], []
     path = "categories.txt"
+    # 找出分隔Fielders, Pitchers的位置
     with open(path, "r") as file:
         index = 0
         for line in file.readlines():
@@ -179,6 +180,7 @@ def read_category():
                 index += 1
             else:
                 split_index = index
+    # 再重讀一次檔案
     with open(path, "r") as file:
         lines = file.readlines()
         for i in range(1, split_index):

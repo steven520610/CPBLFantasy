@@ -153,6 +153,7 @@ $(document).ready(function () {
         // 加入ERA, WHIP, K9
         // 去比
         for (let i = 0; i < cateTotalWeeklyStatsMy.length + 7; i++) {
+            // IP不比
             if (i == 22) {
                 continue;
             }
@@ -198,12 +199,9 @@ $(document).ready(function () {
     // ------------------------------------以上為資料處理的function------------------------------------
 
     // ------------------------------------以下為全域變數------------------------------------
-    const date = new Date();
-    dateString = date.toLocaleDateString();
-    // dateString = dateString.slice(0, 10);
-    $("#dateBar h1").text(dateString);
-
     const socket = io("http://127.0.0.1:5000/matchup");
+
+    // default會執行的event
     socket.on("connect", function () {
         console.log("Connect!");
     });
@@ -212,7 +210,7 @@ $(document).ready(function () {
     //  所以這邊就只是方便查看用的
 
     // Fielder
-    let fielderCategoriesAll = $("#fielderTable thead th");
+    // let fielderCategoriesAll = $("#fielderTable thead th");
     // 24
     // [type, first, 'PA', 'AB', 'R', 'RBI', 'H', '2H', '3H', 'HR', 'TB', 'DP', 'BB', 'IBB', 'HBP', 'K', 'SF', 'BUNT', 'SB', 'CS', 'AVG', 'OBP', 'SLG', 'OPS'
     // 1
@@ -221,7 +219,7 @@ $(document).ready(function () {
     // type, first, 'PA', 'AB', 'R', 'RBI', 'H', '2H', '3H', 'HR', 'TB', 'DP', 'BB', 'IBB', 'HBP', 'K', 'SF', 'BUNT', 'SB', 'CS', 'AVG', 'OBP', 'SLG', 'OPS']
 
     // Pitcher
-    let pitcherCategoriesAll = $("#pitcherTable thead th");
+    // let pitcherCategoriesAll = $("#pitcherTable thead th");
     // 18
     // [type, 'IP', 'W', 'L', 'H', 'HR', 'BB', 'HBP', 'K', 'R', 'ER', 'ERA', 'WHIP', 'K9', 'QS', 'HLD', 'SV', 'SV_H', 'BSV'
     // 1
@@ -290,6 +288,8 @@ $(document).ready(function () {
         $(".bench").parent().addClass("bench");
     }
     addBench()
+
+    // 一載入頁面就會先執行的function
     function Loading() {
 
         function calculateTotalLoading() {
@@ -318,6 +318,7 @@ $(document).ready(function () {
                     return false;
                 }
 
+                // BN格的不列入計算
                 if (!$(this).hasClass("bench")) {
                     // 自己有資料，對手有資料
                     if ($(this).children().eq(1).text() != "-/-" && $(this).children().eq(26).text() == "-/-") {
@@ -326,12 +327,14 @@ $(document).ready(function () {
                             cateTotalFielderMy[i] += Number($(this).children().eq(i + 2).text());
                         }
                     }
+                    // 自己無、對手有
                     else if ($(this).children().eq(1).text() == "-/-" && $(this).children().eq(26).text() != "-/-") {
                         for (let i = 0; i < cateTotalFielderOpp.length; i++) {
                             hasValueFielderOpp = true;
                             cateTotalFielderOpp[i] += Number($(this).children().eq(i + 27).text());
                         }
                     }
+                    // 皆有
                     else {
                         for (let i = 0; i < cateTotalFielderMy.length; i++) {
                             hasValueFielderMy = true;
@@ -742,6 +745,7 @@ $(document).ready(function () {
         compareWeekly();
     }
 
+    // 一載入頁面就會先執行的function
     Loading();
 
     function updateSingle(playerType, current, i, element, valueArray, weeklyArray) {
