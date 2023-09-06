@@ -9,7 +9,7 @@
 
 <body>
     <div>
-        <form method="POST" action={{ url_for("login") }}>
+        <form method="POST" action={{ url_for("other.login") }}>
             <p>
                 <label for="account">帳號：</label>
                 <input type="text" id="account" name="account">
@@ -25,13 +25,13 @@
 
     <div>
         <p>
-        <a href={{ url_for("register") }}>註冊帳號</a>
+        <a href={{ url_for("other.register") }}>註冊帳號</a>
         </p>
     </div>
 
     <div>
         <p>
-        <a href={{ url_for("forget") }}>忘記密碼</a>
+        <a href={{ url_for("other.forget") }}>忘記密碼</a>
         </p>
     </div>
 

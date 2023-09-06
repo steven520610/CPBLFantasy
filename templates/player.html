@@ -18,25 +18,25 @@
         <header class="container">
             <div class="row justify-content-between">
                 <div class="page">
-                    <form action={{ url_for("myteam") }} method="POST">
+                    <form action={{ url_for("myteam.myteam") }} method="POST">
                         <input type="hidden" name="account" value={{ myAccount }}>
                         <input type="submit" class="btn btn-primary" value="My Team">
                     </form>
                 </div>
                 <div class="page">
-                    <form action={{ url_for("matchup") }} method="POST">
+                    <form action={{ url_for("matchup.matchup") }} method="POST">
                         <input type="hidden" name="account" value={{ myAccount }}>
                         <input type="submit" class="btn btn-success" value="Matchup">
                     </form>
                 </div>
                 <div class="page">
-                    <form action={{ url_for("draft") }} method="POST">
+                    <form action={{ url_for("draft.draft") }} method="POST">
                         <input type="hidden" name="account" value={{ myAccount }}>
                         <input type="submit" class="btn btn-dark" value="Draft">
                     </form>
                 </div>
                 <div class="page">
-                    <form action={{ url_for("player") }} method="POST">
+                    <form action={{ url_for("player.player") }} method="POST">
                         <input type="hidden" name="account" value={{ myAccount }}>
                         <input type="submit" class="btn btn-danger" value="Player">
                     </form>

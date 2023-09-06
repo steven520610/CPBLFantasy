@@ -22,8 +22,8 @@ from sqlalchemy import (
     update,
     delete,
 )
-from config import SQLALCHEMY_DATABASE_URI
-from info import (
+from modules.config.config import SQLALCHEMY_DATABASE_URI
+from modules.config.info import (
     DB_FIELDER_CATEGORIES_TO_WEB_STATS_DICT,
     DB_PITCHER_CATEGORIES_TO_WEB_STATS_DICT,
     BOX_TITLE_FIELDER,

@@ -20,7 +20,7 @@
     <h1>歡迎登入Fantasy Baseball</h1>
     <h3>您現在使用的是管理員帳號</h3>
     <hr>
-    <form action={{ url_for("manager") }} method="POST">
+    <form action={{ url_for("other.manager") }} method="POST">
         <p>
             <label>選擇打擊比項:</label>
             <input type="checkbox" name="Batting" value="RBI">RBI
@@ -75,7 +75,7 @@
     </form>
     <hr>
 
-    <a href={{ url_for("home") }}>回首頁</a>
+    <a href={{ url_for("other.home") }}>回首頁</a>
     
     
 </body>

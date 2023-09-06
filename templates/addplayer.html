@@ -188,7 +188,7 @@
                 </div>
                 <div class="confirmContainer" v-show="confirmMessage">
                     <div class="confirmAdd">
-                        <form action={{ url_for("myteam") }} method="POST">
+                        <form action={{ url_for("myteam.myteam") }} method="POST">
                             <input type="hidden" name="account" value={{ account }}>
                             <input type="hidden" name="addPlayer" :value="selectPlayerFA.player_id">
                             <input type="hidden" name="addPlayerType" :value="selectPlayerFAType">
@@ -199,7 +199,7 @@
                     </div>
 
                     <div class="confirmCancel">
-                        <form action={{ url_for("player") }} method="POST">
+                        <form action={{ url_for("player.player") }} method="POST">
                             <input type="hidden" name="account" value={{ account }}>
                             <input type="submit" class="btn btn-primary" value="Cancel">
                         </form>
