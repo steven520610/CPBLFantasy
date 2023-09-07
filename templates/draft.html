@@ -1,23 +1,20 @@
+{% extends "layout.html" %}
 <!DOCTYPE html>
 <html lang="zh-TW">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block head %}
+    {{ super() }}
+    <title>draft</title>
     <link href={{ url_for('static', filename='css/draft.css') }} rel="stylesheet">
-    <title>您的首頁</title>
-    <script src={{ url_for("static", filename="js/jQuery.js") }}></script>
     <script src={{ url_for("static", filename="js/socket.io.min.js") }}></script>
     <script src={{ url_for("static", filename="js/socket.io.min.js.map") }}></script>
     <script src={{ url_for("static", filename="js/draft.js") }}></script>
+{% endblock %}
     
-    
-
-</head>
 
 <body>
     <!--上半部，包含Timer、選取的球員照片、選取的球員數據-->
-    <header>
+    {% block header %}
         <!--Timer的部分-->
         <div id="clockBar">
             <div id="clockTop">
@@ -99,14 +96,14 @@
 
         </div>
         
-    </header>
+    {% endblock %}
     <!--下半部，包括選秀帳號、不同表格-->
-    <main>
+    {% block main %}
         <!--左側之選秀帳號-->
         <div id="bodyContainer">
             <div id="accountBar">
 
-                <div id="login">{{ login_account }}</div>
+                <div id="login">{{ myAccount }}</div>
                 
                 {% set ns = namespace(count=0) %}
                 <span id="roundTitle"><h2>Drafting now!</h2></span>
@@ -375,7 +372,7 @@
                 </div>
             </div>
         </div>
-    </main>
+    {% endblock %}
 </body>
 
 </html>

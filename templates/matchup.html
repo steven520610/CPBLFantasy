@@ -1,49 +1,22 @@
+{% extends "layout.html" %}
 <!DOCTYPE html>
 <html lang="zh-TW">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block head %}
+    {{ super() }}
+    <title>{{ myAccount }}</title>
     <link href={{url_for("static",filename="css/matchup.css")}} rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css">
-    <title>{{ account }}</title>
-    <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
-    <link rel="icon" href="{{ url_for("static", filename="img/logo/{}.png".format(account)) }}">
-    <script src={{url_for("static", filename="js/jQuery.js")}}></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
     <script src={{ url_for("static", filename="js/socket.io.min.js") }}></script>
     <script src={{ url_for("static", filename="js/socket.io.min.js.map") }}></script>
     <script src={{ url_for("static", filename="js/matchup.js")}}></script>
-</head>
+{% endblock %}
 
 <body>
-    <header>
-        <div class="row justify-content-between">
-            <div class="page">
-                <form action={{ url_for("myteam.myteam") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-primary" value="My Team">
-                </form>
-            </div>
-            <div class="page">
-                <form action={{ url_for("matchup.matchup") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-success" value="Matchup">
-                </form>
-            </div>
-            <div class="page">
-                <form action={{ url_for("draft.draft") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-dark" value="Draft">
-                </form>
-            </div>
-            <div class="page">
-                <form action={{ url_for("player.player") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-danger" value="Player">
-                </form>
-            </div>
-        </div>
+    {% block header%}
+        {{ super() }}
+    {% endblock %}
+    
+    {% block main %}
         <div id="Head2Head">
             <table>
                 <thead>
@@ -78,7 +51,7 @@
 
                 <tbody>
                     <tr>
-                        <td class="team">{{ account }}</td>
+                        <td class="team">{{ myAccount }}</td>
                         <td class="scoreless stat">{{ WeeklyStats["my"][6] }}/{{ WeeklyStats["my"][3] }}</td>
                         {% set ns = namespace(weeklyIndex=-1) %}
                         {% for fielderCategory in categories["T_F"] %}
@@ -127,10 +100,8 @@
                         <td class="points">num</td>
                     </tr>
                 </tbody>
-
             </table>
         </div>
-    </header>
         <div id="bodyContainer">
             <div id="fielderTable">
                 <table>
@@ -968,6 +939,7 @@
                 </table>
             </div>
         </div>
+    {% endblock %}
 </body>
 
 </html>

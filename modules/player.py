@@ -170,7 +170,7 @@ def addplayer():
         fielders=fielders,
         pitchers=pitchers,
         selectPlayerFA=selectPlayerFA,
-        account=account,
+        myAccount=account,
         player_id=player_id,
         categories=categories,
     )

@@ -242,7 +242,7 @@ def matchup():
 
     return render_template(
         "matchup.html",
-        account=account,
+        myAccount=account,
         opponent=opponent,
         WeeklyStats=WeeklyStats,
         Fielders=Fielders,

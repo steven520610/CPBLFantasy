@@ -5,7 +5,8 @@ body {
     align-items: center;
 }
 
-header {
+header,
+main {
     flex: 1;
     width: 80%;
     display: flex;
@@ -39,7 +40,7 @@ header {
 }
 
 #bodyContainer {
-    width: 80%;
+    width: 100%;
     border: 2px solid #424242;
 }
 

@@ -169,7 +169,7 @@ def myteam():
 
     return render_template(
         "myteam.html",
-        account=queryAccount.account,
+        myAccount=queryAccount.account,
         fielders=rearrangeDict[account]["Fielders"],
         pitchers=rearrangeDict[account]["Pitchers"],
         totalFielderCategories=totalFielderCategories,

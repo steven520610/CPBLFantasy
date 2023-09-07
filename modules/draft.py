@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify
 from .common import db, Account, Fielder, Pitcher, score_player, socketio
 from .config.info import *
 
@@ -76,7 +76,7 @@ def draft():
     }
     return render_template(
         "draft.html",
-        login_account=request.form["account"],
+        myAccount=request.form["account"],
         accounts=query_account,
         players=players,
         fielder_categories=fielder_categories,

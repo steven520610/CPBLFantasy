@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        {% block head %}
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" rel="stylesheet">
+        <link href="{{ url_for("static", filename="img/logo/{}.png".format(myAccount)) }}" rel="icon">
+        <script src={{ url_for("static", filename="js/jQuery.js") }}></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+        {% endblock %}
+    </head>
+
+    <body>
+        <header>
+            {% block header %}
+            <div class="row justify-content-between">
+                <div class="page">
+                    <form action={{ url_for("myteam.myteam") }} method="POST">
+                        <input type="hidden" name="account" value={{ myAccount }}>
+                        <input type="submit" class="btn btn-primary" value="My Team">
+                    </form>
+                </div>
+                <div class="page">
+                    <form action={{ url_for("matchup.matchup") }} method="POST">
+                        <input type="hidden" name="account" value={{ myAccount }}>
+                        <input type="submit" class="btn btn-success" value="Matchup">
+                    </form>
+                </div>
+                <div class="page">
+                    <form action={{ url_for("draft.draft") }} method="POST">
+                        <input type="hidden" name="account" value={{ myAccount }}>
+                        <input type="submit" class="btn btn-dark" value="Draft">
+                    </form>
+                </div>
+                <div class="page">
+                    <form action={{ url_for("player.player") }} method="POST">
+                        <input type="hidden" name="account" value={{ myAccount }}>
+                        <input type="submit" class="btn btn-danger" value="Player">
+                    </form>
+                </div>
+            </div>
+            {% endblock %}
+        </header>
+        
+        <main>
+            {% block main %}
+            {% endblock %}
+        </main>
+    </body>
+</html>

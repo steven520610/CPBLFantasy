@@ -1,59 +1,29 @@
+{% extends "layout.html" %}
 <!DOCTYPE html>
 <html lang="zh-TW">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% block head %}
+    {{ super() }}
+    <title>{{ myAccount }}</title>
     <link href={{url_for("static",filename="css/myteam.css")}} rel="stylesheet">
-    <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.css" rel="stylesheet">
-    <link href="{{ url_for("static", filename="img/logo/{}.png".format(account)) }}" rel="icon">
-    <title>{{ account }}</title>
-    <script src={{ url_for("static", filename="js/jQuery.js") }}></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
     <script src={{ url_for("static", filename="js/socket.io.min.js") }}></script>
     <script src={{ url_for("static", filename="js/socket.io.min.js.map") }}></script>
     <script src={{ url_for("static", filename="js/myteam.js") }}></script>
-</head>
-
+{% endblock %}
 <body>
-    <header>
-        <div id="title">
-            <div id="message" value={{ account }}>
-                <h1>帳號:{{ account }}，您的球員列表</h1>
-            </div>
-            <div id="date">
-                <h1></h1>
-            </div>
+    {% block header %}
+    <div id="title">
+        <div id="message" value={{ myAccount }}>
+            <h1>帳號:{{ myAccount }}，您的球員列表</h1>
         </div>
-        <div class="row">
-            <div class="page">
-                <form action={{ url_for("myteam.myteam") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-primary" value="My Team">
-                </form>
-            </div>
-            <div class="page">
-                <form action={{ url_for("matchup.matchup") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-success" value="Matchup">
-                </form>
-            </div>
-            <div class="page">
-                <form action={{ url_for("draft.draft") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-dark" value="Draft">
-                </form>
-            </div>
-            <div class="page">
-                <form action={{ url_for("player.player") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
-                    <input type="submit" class="btn btn-danger" value="Player">
-                </form>
-            </div>
+        <div id="date">
+            <h1></h1>
         </div>
-    </header>
-    <body>
+    </div>
+    {{ super() }}
+    {% endblock %}
+    
+    {% block main %}
         <div id="bodyContainer">
             <div id="fielderTable" class="playerTable">
                 <table>
@@ -301,7 +271,7 @@
                 </table>
             </div>
         </div>
-    </body>
+    {% endblock %}
 </body>
 
 </html>
