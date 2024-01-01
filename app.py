@@ -1,3 +1,7 @@
+# Modified date: 2023.12.30
+# Author: Steven
+# Description: 用來啟動網頁app的server
+
 from modules import create_app, socketio
 from flask import render_template
 
@@ -11,4 +15,4 @@ def page_not_found(e):
 
 
 if __name__ == "__main__":
-    socketio.run(app)
+    app.run()

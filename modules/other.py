@@ -1,5 +1,6 @@
-# 2023.9.6
-# 撰寫所有在header上功能頁面之外的其餘頁面的script
+# Modified date: 2023.12.31
+# Author: Steven
+# Description: 撰寫除header的功能頁面之外，其餘頁面的功能
 # 包括home, login, register, forget, manager, myleague, toadyupdate
 
 from flask import (
@@ -41,6 +42,12 @@ def home():
 # 登入頁面
 @otherBP.route("/login", methods=["GET", "POST"])
 def login():
+    # 此路由中使用到jsonify來return一個JSON的原因
+    # 是因為在按下登入後，有使用ajax告知server端這次的連線是否成功，並且依據連線結果，動態的作出響應
+    # 後續的網頁跳轉過程是在JavaScript中來做處理
+
+    # 因此這邊不是使用Flask的return redirect(url_for(...))來做網頁跳轉。
+
     def login_check(account, password):
         query = db.session.query(Account).filter(Account.account == account).first()
         # 帳號不存在
@@ -141,8 +148,7 @@ def manager():
 
             # Fielder
             fielder_columns = [
-                # 這邊都是sqlalchemy的Core功能
-                # 所提供的class
+                # 這邊都是sqlalchemy的Core功能所提供的class
                 # 與利用 db = SQLAlchemy()中
                 # db.Column不同
                 Column("db_id", Integer, primary_key=True),

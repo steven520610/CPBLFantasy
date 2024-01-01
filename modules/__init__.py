@@ -1,3 +1,9 @@
+# Modified date: 2023.12.31
+# Author: Steven
+# Description: 利用Python獨特的方法，來初始化modules這個package，
+# 決定app在此處如何建立app物件
+# 並執行一些初始完後，就要馬上執行的動作。
+
 from flask import Flask
 from flask_cors import CORS
 from .config.info import *
@@ -22,14 +28,22 @@ def create_app():
     app.config.from_pyfile("config/config.py")
     app.debug = True
 
-    # 因為是在server一啟動就要處理，還沒有收到任何user端送來的請求
-    # 也就是一啟動時，並不在任何的上下文(路由)中
+    # 因為在server一啟動就要處理，此時還沒有收到任何user端送來的請求
+    # 也就是一啟動時，並不在任何的上下文(request context)中
     # 因此需要透過這個方法，手動建立一個上下文
     # 否則會報RunTime Error
     with app.app_context():
+        # 此處分別用兩種方式建立與db的連結
+        # 第一個是用Core component
+        # 第二個是ORM component
+        # 兩者會處理不同的任務，主要原因是有些操作只能透過其中一個component來完成。
         init_db()
         db.init_app(app)
         socketio.init_app(app, cors_allowed_origins="http://127.0.0.1:5000")
+        # 每一次重啟app，都會做此步驟
+        # 因為在db內，球員的排列是所有球員依據隊伍去排的，各個帳號所選的球員也是依照這個方法排列
+        # 然而在登入後，我想要在user進到自己所選球員的頁面時，就顯示排列正確的roster
+        # 因此在每一次啟動app時，就進行排列的動作。
         rearrangeAll()
 
     from .other import otherBP

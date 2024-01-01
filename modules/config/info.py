@@ -1,12 +1,18 @@
-"""
-宣告在app中，不會變動的數值
-"""
+# Modified date: 2023.12.30
+# Author: Steven
+# Description: 事先定義好在app運行中，不會變動的一些數值
 
 AVG_PA = 250
 AVG_AVG = 0.261
 AVG_OBP = 0.330
 AVG_SLG = 0.365
+"""
+宣告此專案運行的過程中，不會變動的數值
+然而在不同日期內，這些平均的數據可能會有小小的浮動。
+"""
 
+# 利用dict的方式
+# 指定db內各種數據的column對應到中職網頁中，位於網頁中的第幾個column。
 DB_FIELDER_CATEGORIES_TO_WEB_STATS_DICT = {
     "PA": 1,
     "AB": 2,
@@ -52,6 +58,8 @@ DB_PITCHER_CATEGORIES_TO_WEB_STATS_DICT = {
     "ER": 25,
 }
 
+# 決定各種數據要如何的計算該球員的分數
+# 主要是基於Fantasy上的分數，可以自己做更換。
 SCORING_FIELDER = {
     "R": 3,
     "RBI": 3,
@@ -77,14 +85,14 @@ SCORING_PITCHER = {
     "HBP": -1,
     "ER": -2,
     "QS": 7,
-    # 因為是用Flask SQLAlchemy的class
-    # 因為不能在名稱使用+號，所以該屬性設定為SV_H
-    # 而isinstance檢查的是class，不是db內的欄位名稱
-    # 所以這邊要使用SV_H
+    # 若利用Flask SQLAlchemy的方式，以class來定義一個table
+    # 則每個屬性名稱就是一個column。
+    # 然而不能在名稱使用+號(程式語言的規定)，所以該屬性名稱設定為SV_H
     "SV_H": 16,
     "BSV": -5,
 }
 
+# 列出成績看板(BOX)中，中職網頁有記錄的數據。
 BOX_TITLE_FIELDER = [
     "AB",
     "R",
@@ -114,6 +122,8 @@ BOX_TITLE_PITCHER = [
     "ER",
 ]
 
+# 利用dict的方式
+# 將今日有記錄的成績，決定要輸入到db內有記錄今日成績的table中的哪個column
 FIELDER_CATEGORIES_TO_TODAY_CATEGORIES = {
     "PA": 3,
     "AB": 4,

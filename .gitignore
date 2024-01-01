@@ -16,3 +16,9 @@ package-lock.json
 package.json
 s.py
 .vscode/
+testResult/
+*.csv
+flask_docker.py
+Dockerfile
+requirements.txt
+Airflow

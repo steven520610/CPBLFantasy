@@ -1,3 +1,10 @@
+# Modified date: 2023.12.31
+# Author: Steven
+# Description: 實作此app初始化完之後，就要立刻執行的內容，包括
+#   1. SQLAlchemy: 處理此app與db的互動
+#   2. SocketIO: 處理Client Server間的雙向互動
+#   3. 排序db內每個帳號所選的球員如何呈現在roster中
+# 以及定義一些在多個網頁中，需要重複使用到的function
 from flask import current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
@@ -16,11 +23,11 @@ fielderTable = None
 pitcherTable = None
 
 
+# SQLAlchemy Core 定義的 Model
+# 把從db抓取Table的步驟在一開始就執行
+# 這樣不用每個路由都重抓一次
 def init_db():
     global engine, accountTable, fielderTable, pitcherTable
-    # Core
-    # 把從db抓取Table的步驟在一開始就執行
-    # 這樣不用每個路由都重抓一次
     engine = create_engine(current_app.config["SQLALCHEMY_DATABASE_URI"])
     accountTable = Table("Account", metadata, autoload_with=engine)
     fielderTable = Table("Fielder", metadata, autoload_with=engine)
@@ -127,25 +134,6 @@ class Pitcher(db.Model):
         return_dict["Account"] = self.Account
         return_dict["position"] = self.position.split(", ")
         return_dict["round"] = self.round
-        # return {
-        #     "player_ID": self.player_id,
-        #     "Player": self.name,
-        #     "team": self.team,
-        #     "IP": self.IP,
-        #     "W": self.W,
-        #     "SV+H": self.SV_H,
-        #     "HR": self.HR_pitcher,
-        #     "WHIP": self.WHIP,
-        #     "ERA": self.ERA,
-        #     "K/9": self.K9,
-        #     "K": self.K_pitcher,
-        #     "BB": self.BB_pitcher,
-        #     "QS": self.QS,
-        #     "K/BB": self.K_BB,
-        #     "Account": self.Account,
-        #     "position": self.position.split(", "),
-        #     "round": self.round,
-        # }
         return return_dict
 
 
@@ -153,7 +141,7 @@ class Pitcher(db.Model):
 # 每個帳號會當作key，裡面包含了該帳號的rearrange, rearrangeQueryFielders, rearrangeQueryPitchers
 rearrangeDict = {}
 rearrange = False
-# 根據球員的position，決定該球員會在網頁的哪一列上，讓該球員會對應到守位格
+# 根據球員的position，決定該球員會在網頁的哪一列上，讓該球員會對應到正確的守位格
 # 總共有23個格子 (19個正常守位 + 4個BN)
 positionDict = {
     # 11
@@ -166,7 +154,7 @@ positionDict = {
 # 因為當初爬蟲爬取球員資料時
 # 是依據隊伍的順序從上爬下來
 # 所以db內球員的順序預設就會以隊伍來做排序
-# 造成select時，也會以隊伍順序從上排下來
+# 讓select時也會以隊伍順序從上排下來
 # 造成該守位不一定會對應到符合的球員
 # 因此需要對該帳號所選的球員
 # 根據守位重新排列
@@ -174,7 +162,7 @@ def rearrangePlayer(account):
     queryFielders = db.session.query(Fielder).filter(Fielder.Account == account).all()
     queryPitchers = db.session.query(Pitcher).filter(Pitcher.Account == account).all()
 
-    # 宣告有多個該守位的格子已被使用幾個、最多使用幾個
+    # 宣告該帳號中，有多個該守位的格子已被使用幾個、最多使用幾個
     # 會需要根據不同聯盟、不同管理員設定Roster以及守位的數量去做更動
     Used = {
         "OF": {"Count": 0, "Limit": 4},
@@ -187,25 +175,23 @@ def rearrangePlayer(account):
     # 宣告一個用來存調整順序後的球員陣列
     # 長度會等於positionDict對應到球員種類的陣列長度
 
-    # 每個element最後若非False
-    # 會是一個ORM Model的instance
+    # 陣列的每個element若非False，就會是一個ORM Model的instance
 
     # 因為Fielder和Pitcher在db裡面分開存
     # 所以這邊也分開處理
     rearrangeQueryFielders = [False] * len(positionDict["Fielder"])
 
-    # 先額外賦予每個instance "是否已經被分配守位" 這個屬性
+    # 額外賦予每個instance "是否已經被分配守位" 這個屬性
     for queryFielder in queryFielders:
         queryFielder.assignPosition = False
 
-    # 設定當前的fielder、守位
-    # 起始的索引值
+    # 宣告當前的fielder、守位之索引值
     fielderIndex = 0
     positionIndex = 0
 
     # 宣告決定程式流程的一些Bool變數，分別是：
-    # 決定所選球員內，是否擁有多守位的球員
-    # 決定排序時是否在第一輪(略過多守位球員的情況)
+    # 決定所選球員內，是否擁有多守位
+    # 決定當前排序時是否在第一輪(因為第一輪會略過多守位球員)
     hasMultiPosition = False
     firstRound = True
 
@@ -299,7 +285,7 @@ def rearrangePlayer(account):
 
                 # 迭代該該球員的每個守位
                 for playerPosition in queryFielders[fielderIndex].position.split(", "):
-                    # 這邊和上述大致相同了
+                    # 這邊和上述大致相同
                     for position in positionDict["Fielder"]:
                         if playerPosition == position:
                             positionIndex = positionDict["Fielder"].index(position)
@@ -352,6 +338,7 @@ def rearrangePlayer(account):
 
             fielderIndex += 1
 
+    # 將該帳號排序完的球員，存到最初宣告的空dict
     rearrangeDict[account]["Fielders"] = rearrangeQueryFielders
 
     # Pitcher
