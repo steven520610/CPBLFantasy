@@ -1,4 +1,4 @@
-# Modified date: 2023.12.31
+# Modified date: 2023.2.14
 # Author: Steven
 # Description: 利用Python獨特的方法，來初始化modules這個package，
 # 決定app在此處如何建立app物件
@@ -30,14 +30,14 @@ def create_app():
 
     # 因為在server一啟動就要處理，此時還沒有收到任何user端送來的請求
     # 也就是一啟動時，並不在任何的上下文(request context)中
-    # 因此需要透過這個方法，手動建立一個上下文
+    # 因此需要透過這個方法，手動建立一個應用上下文(application context)
     # 否則會報RunTime Error
     with app.app_context():
         # 此處分別用兩種方式建立與db的連結
         # 第一個是用Core component
+        init_db()
         # 第二個是ORM component
         # 兩者會處理不同的任務，主要原因是有些操作只能透過其中一個component來完成。
-        init_db()
         db.init_app(app)
         socketio.init_app(app, cors_allowed_origins="http://127.0.0.1:5000")
         # 每一次重啟app，都會做此步驟

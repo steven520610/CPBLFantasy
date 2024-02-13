@@ -1,4 +1,4 @@
-# Modified date: 2023.12.31
+# Modified date: 2023.2.14
 # Author: Steven
 # Description: 撰寫除header的功能頁面之外，其餘頁面的功能
 # 包括home, login, register, forget, manager, myleague, toadyupdate
@@ -86,6 +86,8 @@ def login():
 
                 return jsonify(
                     {
+                        # 因為需要傳參數的關係，所以沒辦法直接使用url_for
+                        # 是在javascript中使用url object來處理
                         "redirect": "/league_home",
                         "id": id,
                         "success": True,
@@ -106,36 +108,30 @@ def register():
         received = request.form
         account = received["account"]
         password = received["password"]
-
         query = db.session.query(Account).filter(Account.account == account).first()
         if query:
             return render_template("register.html", message="此帳號已存在！")
         else:
-            if "team" not in received:
-                # 一開始新增帳號是不會馬上新增對手
-                # 之後手動更新或是另外用一個演算法
-                # 更新每一週對手的更動
-                new_account = Account(
-                    account, generate_password_hash(password, "sha256"), None, "TBD"
-                )
-            else:
-                new_account = Account(
-                    account,
-                    generate_password_hash(password, "sha256"),
-                    received["team"],
-                    "TBD",
-                )
+            # 一開始新增帳號是不會馬上新增對手
+            # 之後手動更新或是另外用一個演算法
+            # 更新每一週對手的更動
+            new_account = Account(
+                account=account,
+                password=generate_password_hash(password, "sha256"),
+                team=received["team"],
+                opponent="TBD",
+            )
             db.session.add(new_account)
             db.session.commit()
             return redirect(url_for("other.home"))
-
-    return render_template("register.html")
+    else:
+        return render_template("register.html")
 
 
 # 忘記密碼頁面
 @otherBP.route("/forget", methods=["GET", "POST"])
 def forget():
-    pass
+    return "嘿嘿見鬼啦，還沒寫好！"
 
 
 # 聯盟管理者頁面
@@ -257,14 +253,20 @@ def myleague(id):
     return render_template("myleague.html", account=account, team=team)
 
 
-# 把今日成績加入本週成績、球季成績
+# 利用一個簡單的路由
+# 透過一個按鈕，確定把今日球員所累積的成績
+# 加入本週成績、球季成績
 @otherBP.route("/todayupdate", methods=["GET", "POST"])
 def todayupdate():
     # ==================
     # 調整不能直接相加的比項
+    # 此處都是由已經計算完的數據去做計算的
     # ==================
     def adjustUnadditive(type, processDict, shouldRound, isWeekly):
         if type == "Fielders":
+            # 用例外處理
+            # 來解決分母為0的問題，因為有可能該球員沒有打數的問題
+            # 像是保送、代跑、代守等等
             try:
                 processDict["AVG"] = processDict["H"] / processDict["AB"]
                 processDict["SLG"] = processDict["TB"] / processDict["AB"]
@@ -368,6 +370,7 @@ def todayupdate():
                 def seasonUpdate(type, todayPlayersResult, players):
                     for i in range(len(todayPlayersResult)):
                         # 取出球員對應到的球季成績
+                        # O(n^2)
                         query_season = select(players).where(
                             players.c.player_id == todayPlayersResult[i][1]
                         )
@@ -376,6 +379,8 @@ def todayupdate():
 
                         processDict = {}
 
+                        # 今日成績中的球員，在當季成績沒有資料
+                        # 亦即今日是該球員的初登場
                         if not SelectPlayer:
                             # 加入非stats的欄位
                             processDict["player_id"] = todayPlayersResult[i][1]
@@ -392,6 +397,8 @@ def todayupdate():
                             ) in FIELDER_CATEGORIES_TO_TODAY_CATEGORIES.items():
                                 # AVG, OBP, SLB, OPS不能直接加
                                 if key not in ["AVG", "OBP", "SLG", "OPS"]:
+                                    # 利用例外處理
+                                    # 解決還尚未在本季成績內的球員
                                     try:
                                         processDict[key] = (
                                             getattr(SelectPlayer, key)
@@ -460,7 +467,9 @@ def todayupdate():
                                 processDict["APP"] = 1
 
                         adjustUnadditive(type, processDict, True, False)
-                        print(processDict)
+                        # print(processDict)
+
+                        # 已存在更新db即可
                         if SelectPlayer:
                             update_stmt = (
                                 update(players)
@@ -468,6 +477,7 @@ def todayupdate():
                                 .values(processDict)
                             )
                             connection.execute(update_stmt)
+                        # 不存在新增球員到db
                         else:
                             # Account, position, round欄位可以為null，所以不需要設定
                             insert_stmt = insert(players).values(processDict)
@@ -563,6 +573,7 @@ def todayupdate():
                     # =========================
                     # 依照傳入的Table、球員種類
                     # 更新WeeklyStats Table的資料
+                    # 此處是依據每個存在於WeeklyStats中的帳號去更新的
                     # =========================
                     def updatePlayer(
                         type,
@@ -571,17 +582,20 @@ def todayupdate():
                         todayPlayerColumns,
                         players,
                         todayTotal,
+                        Account,
                     ):
                         for i in range(len(todayPlayersResult)):
                             # 因為有今日成績的球員，並沒有紀錄該球員所屬的Account
-                            # 所以要利用join把有球員所屬的Account，也就是整季成績的Table給載進來
+                            # 所以要利用join來連接有記錄該球員所屬的Account，也就是整季成績的Table給載進來
                             # 利用兩者都有的player_id去join
                             query = (
-                                select(todayplayers)
-                                .join(
+                                select(todayplayers).join(
                                     players,
                                     players.c.player_id == todayplayers.c.player_id,
                                 )
+                                # 直接利用where語句
+                                # 取出該帳號所選的球員，減少選到一些多餘的球員
+                                # 像是沒人選的球員、不屬於該帳號的球員
                                 .where(
                                     todayplayers.c.player_id
                                     == todayPlayersResult[i][1],
@@ -589,15 +603,15 @@ def todayupdate():
                                 )
                             )
                             result = connection.execute(query)
-                            # 今日成績的所有球員都會被遍歷，但有些球員可能沒人選
-                            # 於是會跳過這些沒人選的球員
                             SelectPlayer = result.fetchone()
-                            if not SelectPlayer:
-                                continue
-                            # 接下來要判斷選到的球員，是否被放在BN
-                            # 不是的話就會跳過
+
+                            # 用一個index，去確認該球員在該帳號所安排的哪個格子
                             index = 0
-                            # 確認選到的球員被放在rearrange的位置
+
+                            # 檢查有被加到今日成績中且是該帳號所屬的球員
+                            # 是否有對應到該帳號所安排的格子內
+
+                            # 如果對應到了就馬上跳出迴圈，進行數據的加總
                             for player in rearrangeDict[Account.account][type]:
                                 if not player or SelectPlayer[1] != int(
                                     player.player_id
@@ -608,14 +622,15 @@ def todayupdate():
 
                             # 野手和投手BN格子的索引不同
                             if type == "Fielders":
+                                # 大於index，就表示該球員今日的成績不算
+                                # 因為該帳號把該球員放在BN
                                 if index >= 11:
                                     continue
                             elif type == "Pitchers":
                                 if index >= 8:
                                     continue
 
-                            # 有被選入到某個Account的球員
-                            # 因為回圈內有些地方會跳出，因此宣告一個取index的變數
+                            # 宣告一個取TodayPlayer的column的index
                             j = 0
 
                             if type == "Fielders":
@@ -749,6 +764,7 @@ def todayupdate():
                                 todayFielderColumns,
                                 fielders,
                                 todayTotal,
+                                Account,
                             )
 
                             updatePlayer(
@@ -758,6 +774,7 @@ def todayupdate():
                                 todayPitcherColumns,
                                 pitchers,
                                 todayTotal,
+                                Account,
                             )
 
                             # 以上Account所有選擇的球員之stats都加總完成
