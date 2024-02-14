@@ -1,4 +1,4 @@
-# Modified date: 2023.12.31
+# Modified date: 2024.2.14
 # Author: Steven
 # Description: 實作此app初始化完之後，就要立刻執行的內容，包括
 #   1. SQLAlchemy: 處理此app與db的互動
@@ -299,12 +299,12 @@ def rearrangePlayer(account):
                                     + Used[position]["Limit"]
                                 ):
                                     if not rearrangeQueryFielders[positionIndex]:
-                                        rearrangeQueryFielders[
-                                            positionIndex
-                                        ] = queryFielders[fielderIndex]
-                                        queryFielders[
-                                            fielderIndex
-                                        ].assignPosition = True
+                                        rearrangeQueryFielders[positionIndex] = (
+                                            queryFielders[fielderIndex]
+                                        )
+                                        queryFielders[fielderIndex].assignPosition = (
+                                            True
+                                        )
                                         Used[position]["Count"] += 1
                                         shouldBreak = True
                                         break
@@ -451,3 +451,38 @@ def score_player(type, player, SCORING_PLAYER, categories):
         IPDecimal = int(player.IP) + (player.IP - int(player.IP)) * 3**-1
         score += IPDecimal * 3.6
     return score
+
+
+def read_category():
+    """讀取categories.txt內的比項
+
+    Returns:
+        list: fielder_categories,
+        list: pitcher_categories,
+        int: number of fielder_categories,
+        int: number of pitcher_categories
+    """
+    fielder_categories, pitcher_categories = [], []
+    path = "categories.txt"
+    # 找出分隔Fielders, Pitchers的位置
+    with open(path, "r") as file:
+        index = 0
+        for line in file.readlines():
+            if line.strip() != "-":
+                index += 1
+            else:
+                split_index = index
+                break
+    # 再重讀一次檔案
+    with open(path, "r") as file:
+        lines = file.readlines()
+        for i in range(1, split_index):
+            fielder_categories.append(lines[i].strip())
+        for i in range(split_index + 2, len(lines)):
+            pitcher_categories.append(lines[i].strip())
+    return (
+        fielder_categories,
+        pitcher_categories,
+        len(fielder_categories),
+        len(pitcher_categories),
+    )

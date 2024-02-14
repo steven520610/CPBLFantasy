@@ -5,7 +5,7 @@
 {% block head %}
     {{ super() }}
     <title>{{ myAccount }}</title>
-    <link href={{url_for("static",filename="css/myteam.css")}} rel="stylesheet">
+    <link href={{ url_for("static",filename="css/myteam.css") }} rel="stylesheet">
     <script src={{ url_for("static", filename="js/socket.io.min.js") }}></script>
     <script src={{ url_for("static", filename="js/socket.io.min.js.map") }}></script>
     <script src={{ url_for("static", filename="js/myteam.js") }}></script>
@@ -60,14 +60,15 @@
                                         </td>
                                     {% endif %}
                                     <td class="type player">
-                                        <a href="{{ 'https://www.cpbl.com.tw/team/person?Acnt=000000' + fielder.player_id}}" 
+                                        <a href={{ 'https://www.cpbl.com.tw/team/person?Acnt=000000' + fielder.player_id}} 
                                         class="link"
                                         target="_blank">{{ fielder.name }}</a>
                                         <span class="playerInfo">
                                             {{ " CTB - " + fielder.position if fielder.team == "中信兄弟" 
                                                 else " RKM - " + fielder.position if fielder.team == "樂天桃猿" 
                                                 else " WD - " + fielder.position if fielder.team == "味全龍" 
-                                                else " FG - " + fielder.position if fielder.team == "富邦悍將" 
+                                                else " FG - " + fielder.position if fielder.team == "富邦悍將"
+                                                else " TSG - " + fielder.position if fielder.team == "台鋼雄鷹" 
                                                 else " UL - " + fielder.position  }}
                                         </span>
                                     </td>
@@ -84,9 +85,12 @@
                                         <td class="stat first">{{ existedFieldersStats[ns.fielder_index][4] }}/{{ existedFieldersStats[ns.fielder_index][1] }}</td>
                                         {% for T_fielder_category in totalFielderCategories %}
                                             {% if T_fielder_category in selectFielderCategories %}
+                                                {# 處理浮點數的顯示問題 #}
                                                 {% if existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3] | isinstance("float") %}
+                                                    {# 大於1的值，整數部分要顯示 #}
                                                     {% if existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3] >= 1 %}
                                                         <td class="stat">{{ "{:.3f}".format(existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3]) }}</td>
+                                                    {# 小於1的值，整數部分不顯示 #}
                                                     {% else %}
                                                         <td class="stat">{{ "{:.3f}".format(existedFieldersStats[ns.fielder_index][FIELDER_CATEGORIES_TO_TODAY_CATEGORIES[T_fielder_category]-3])[1:] }}</td>
                                                     {% endif %}

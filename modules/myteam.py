@@ -1,5 +1,7 @@
-# 2023.9.6
-# 撰寫myteam頁面的script
+# Modified date: 2024.2.14
+# Author: Steven
+# Description: 處理myteam路由中
+# 所有使用到的功能
 
 from flask import Blueprint, request, render_template, jsonify
 from .common import (
@@ -14,6 +16,7 @@ from .common import (
     rearrangeDict,
     positionDict,
     rearrangePlayer,
+    read_category,
 )
 from .config.info import *
 from sqlalchemy import Table, select, update, inspect
@@ -40,7 +43,8 @@ def isinstance_filter(obj, class_name):
 @myteamBP.route("/myteam", methods=["GET", "POST"])
 def myteam():
     account = request.form["account"]
-    # addplayer路由中，表單才會傳下面這些資料
+    # player頁面中的addplayer路由
+    # 表單才會傳下面這些資料給此路由
     try:
         addPlayerID = int(request.form["addPlayer"])
         addPlayerType = request.form["addPlayerType"]
@@ -95,7 +99,7 @@ def myteam():
     inspector = inspect(engine)
     existedTables = inspector.get_table_names()
 
-    # 用來存登入此帳號的使用者中，所擁有且今日有出賽球員的成績
+    # 用來存登入此帳號的使用者所擁有且今日有出賽球員的成績
     existedFieldersStats, existedPitchersStats = [], []
 
     if "TodayFielder" not in existedTables:
@@ -184,6 +188,8 @@ def myteam():
     )
 
 
+# 接收當user交換不同格子的選手時
+# 所發送出來的AJAX請求
 @myteamBP.route("/myteam/update", methods=["POST"])
 def myteamUpdate():
     global rearrangeDict

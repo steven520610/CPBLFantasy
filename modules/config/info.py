@@ -1,4 +1,4 @@
-# Modified date: 2023.12.30
+# Modified date: 2024.2.14
 # Author: Steven
 # Description: 事先定義好在app運行中，不會變動的一些數值
 
@@ -169,37 +169,3 @@ PITCHER_CATEGORIES_TO_TODAY_CATEGORIES = {
     "SV_H": 19,
     "BSV": 20,
 }
-
-
-def read_category():
-    """讀取categories.txt內的比項
-
-    Returns:
-        list: fielder_categories,
-        list: pitcher_categories,
-        int: number of fielder_categories,
-        int: number of pitcher_categories
-    """
-    fielder_categories, pitcher_categories = [], []
-    path = "categories.txt"
-    # 找出分隔Fielders, Pitchers的位置
-    with open(path, "r") as file:
-        index = 0
-        for line in file.readlines():
-            if line.strip() != "-":
-                index += 1
-            else:
-                split_index = index
-    # 再重讀一次檔案
-    with open(path, "r") as file:
-        lines = file.readlines()
-        for i in range(1, split_index):
-            fielder_categories.append(lines[i].strip())
-        for i in range(split_index + 2, len(lines)):
-            pitcher_categories.append(lines[i].strip())
-    return (
-        fielder_categories,
-        pitcher_categories,
-        len(fielder_categories),
-        len(pitcher_categories),
-    )
