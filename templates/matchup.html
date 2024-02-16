@@ -12,7 +12,7 @@
 {% endblock %}
 
 <body>
-    {% block header%}
+    {% block header %}
         {{ super() }}
     {% endblock %}
     
@@ -73,7 +73,7 @@
                         {% endfor %}
                         <td class="points">num</td>
                     </tr>
-
+                    {# my 處理完畢 #}
                     <tr>
                         <td class="team">{{ opponent }}</td>
                         <td class="scoreless stat">{{ WeeklyStats["opp"][6]}}/{{ WeeklyStats["opp"][3] }}</td>
@@ -87,8 +87,6 @@
                             {% endif %}
                         {% endfor %}
 
-                        <!--先用my代替一下opp，因為寫這邊的時候，opp剛好沒成績，之後有本週成績後就能替換了
-                            或是可以先用-，之後在JS內處理 -->
                         {% for pitcherCategory in categories["T_P"] %}
                             {% set ns.weeklyIndex = ns.weeklyIndex + 1 %}
                             {% if pitcherCategory in categories["S_P"] %}
@@ -99,6 +97,7 @@
                         {% endfor %}
                         <td class="points">num</td>
                     </tr>
+                    {# opp處理完畢 #}
                 </tbody>
             </table>
         </div>
@@ -141,7 +140,7 @@
                                     <!--兩邊都有球員的情況-->
                                     {% if i < FieldersCount["opp"] %}
                                         <td class="type player">
-                                            <a href="{{ 'https://www.cpbl.com.tw/team/person?Acnt=000000' + Fielders["my"][i].player_id}}" 
+                                            <a href={{ 'https://www.cpbl.com.tw/team/person?Acnt=000000' + Fielders["my"][i].player_id }} 
                                             class="link"
                                             target="_blank">{{ Fielders["my"][i].name }}</a>
                                             <span class="playerInfo">
@@ -149,6 +148,7 @@
                                                     else " RKM - " + Fielders["my"][i].position if Fielders["my"][i].team == "樂天桃猿" 
                                                     else " WD - " + Fielders["my"][i].position if Fielders["my"][i].team == "味全龍" 
                                                     else " FG - " + Fielders["my"][i].position if Fielders["my"][i].team == "富邦悍將" 
+                                                    else " TSG - " + Fielders["my"][i].position if Fielders["my"][i].team == "台鋼雄鷹"
                                                     else " UL - " + Fielders["my"][i].position  }}
                                             </span>
                                         </td>
@@ -192,6 +192,7 @@
                                         {% endif %}
 
                                         <!--position-->
+                                        {# 11是因為野手的格子最多就是11格，可視聯盟規定調整 #}
                                         {% if i < 11 %}
                                             <td class="position">{{ RosterPositions["Fielder"][i] }}</td>
                                         {% else %}
@@ -514,6 +515,7 @@
                         {% endfor %}
 
                         <!--Total列-->
+                        {# 計算會交由JavaScript計算 #}
                         <tr class="total">
                             <!--my-->
                             <td>Totals</td>

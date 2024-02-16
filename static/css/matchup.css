@@ -30,6 +30,10 @@ main {
     border-left: 1px solid #d7d7d7;
 }
 
+.notselected {
+    display: none;
+}
+
 #Head2Head tr {
     border-top: 1px solid #d7d7d7;
     border-bottom: 1px solid #d7d7d7;
@@ -126,9 +130,6 @@ thead .position {
     text-align: center;
 }
 
-.notselected {
-    display: none;
-}
 
 .empty {
     padding-left: 6px;

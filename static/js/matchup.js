@@ -179,6 +179,8 @@ $(document).ready(function () {
                     oppElement.addClass("win");
                 }
             }
+            // 平手就不需要處理
+            // 因為一開始就已經remove win這個class了
         }
         let myWin = myRow.find(".stat.win").length;
         let oppWin = oppRow.find(".stat.win").length;
@@ -320,7 +322,7 @@ $(document).ready(function () {
 
                 // BN格的不列入計算
                 if (!$(this).hasClass("bench")) {
-                    // 自己有資料，對手有資料
+                    // 自己有資料，對手無資料
                     if ($(this).children().eq(1).text() != "-/-" && $(this).children().eq(26).text() == "-/-") {
                         for (let i = 0; i < cateTotalFielderMy.length; i++) {
                             hasValueFielderMy = true;
@@ -428,6 +430,8 @@ $(document).ready(function () {
             });
         }
 
+        // 顯示自己、對手的
+        // 野手、投手的Total列資料
         function displayTodayLoading(playerType, target) {
             if (playerType == "Fielder") {
                 if (target == "my") {
@@ -658,7 +662,6 @@ $(document).ready(function () {
                     cateTotalWeeklyStatsOpp[i + 18] = Number(oppRow.children().eq(i + 27).text()) + cateTotalPitcherOpp[i];
                 }
             }
-            // console.log(cateTotalWeeklyStatsMy);
         }
         function displayWeeklyLoading() {
             // 直接指定WeeklyStats的數量了
@@ -746,6 +749,10 @@ $(document).ready(function () {
     }
 
     // 一載入頁面就會先執行的function
+    // 因此目前為止，載入頁面會執行：
+    // 1. 計算自己、對手當日成績的Total
+    // 2. 將今日成績加上當週成績並計算然後顯示
+    // 3. 計算完之後比較當週成績
     Loading();
 
     function updateSingle(playerType, current, i, element, valueArray, weeklyArray) {
@@ -1530,6 +1537,7 @@ $(document).ready(function () {
         }
     }
     socket.on("update", function (response) {
+        // deepcopy
         let cateTotalFielderOldMy = [...cateTotalFielderMy];
         let cateTotalFielderOldOpp = [...cateTotalFielderOpp];
         let cateTotalPitcherOldMy = [...cateTotalPitcherMy];
@@ -1552,7 +1560,7 @@ $(document).ready(function () {
 
                 // 根據名字來搜尋(用id可能更好)
                 // 選到自己的球員
-                if (myPlayer.text() == element[2]) {
+                if (myPlayer.text() == element[2] && row.find(".position").text() != "BN") {
                     hasValueFielderMy = true;
                     for (let i = 0; i < 23; i++) {
 
@@ -1561,7 +1569,7 @@ $(document).ready(function () {
                     }
                 }
                 // 選到的是對手的球員
-                else if (oppPlayer.text() == element[2]) {
+                else if (oppPlayer.text() == element[2] && row.find(".position").text() != "BN") {
                     hasValueFielderOpp = true;
                     for (let i = 0; i < 23; i++) {
 
@@ -1613,7 +1621,7 @@ $(document).ready(function () {
 
 
             dbPitchers.forEach(element => {
-                if (myPlayer.text() == element[2]) {
+                if (myPlayer.text() == element[2] && row.find(".position").text() != "BN") {
                     hasValuePitcherMy = true;
                     for (let i = 0; i < 18; i++) {
 
@@ -1622,7 +1630,7 @@ $(document).ready(function () {
                     }
                 }
 
-                else if (oppPlayer.text() == element[2]) {
+                else if (oppPlayer.text() == element[2] && row.find(".position").text() != "BN") {
                     hasValuePitcherOpp = true;
                     // postion, type, empty不處理
                     for (let i = 0; i < 18; i++) {

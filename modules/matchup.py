@@ -2,7 +2,7 @@
 # Author: Steven
 # Description: 處理matchup路由中
 # 所有使用到的功能
-from flask import Blueprint, current_app, request, render_template
+from flask import Blueprint, request, render_template
 from threading import Lock
 from .common import *
 from sqlalchemy import Table, inspect, select
@@ -40,8 +40,8 @@ def background_update():
                 socketio.sleep(10)
                 # 因為disconnect後
                 # 雖然started已經設為False了
-                # 但可能本來就已經進入while loop
-                # 但還在這個等待的時間
+                # 但有可能已經進入while loop
+                # 然後還在這個等待的時間
                 # 因此額外加上一個判斷式
                 # 如果是在等待時間disconnect
                 # 就不會再執行
@@ -80,6 +80,7 @@ def background_update():
                         emit_json["Pitcher"] = pitchers
 
                         socketio.emit("update", emit_json, namespace="/matchup")
+                        print("Update")
 
         finally:
             background_task.release()
@@ -87,8 +88,6 @@ def background_update():
 
 @matchupBP.route("/matchup", methods=["GET", "POST"])
 def matchup():
-    # 根據league_home頁面的表單內的hidden input
-    # 傳入account
     account = request.form["account"]
 
     # 根據輸入的帳號，提出該帳號名稱對應到的
@@ -154,7 +153,7 @@ def matchup():
         result = connection.execute(queryOpp)
         WeeklyStats["opp"] = result.fetchone()
 
-    # 計算自己與對手的Players數量，選擇多的當作在網頁要呈現幾列
+    # 計算自己與對手的Players數量，選擇較多，決定網頁上要呈現幾列
     # 如果不足的那邊就會是Empty
     FieldersCount, PitchersCount = {}, {}
     # 手動宣告此聯盟內的Roster Positions
@@ -186,12 +185,12 @@ def matchup():
         for fielder in Fielders[key]:
             # inlineup是用來判斷網頁中，有沒有需要顯示資料
             # 注意這邊db內並沒有這個欄位
-            # 也就是說可以利用這個方法，建立一個隱藏的欄位，傳給後續的程式使用
+            # 因此這邊是建立一個臨時屬性，並在後續使用
             if not table_exist:
                 fielder.inlineup = False
             else:
                 # 檢查每個自己選到的球員，是否存在TodayFielder這個Table
-                # 也就是檢查今天有沒有成績
+                # 也就是檢查今天有沒有上場
                 with engine.begin() as connection:
                     query = select(TodayFielder).where(
                         TodayFielder.c.player_id == fielder.player_id
@@ -203,6 +202,7 @@ def matchup():
                         fielder.inlineup = False
                     else:
                         fielder.inlineup = True
+                        # 存放該次迭代中，該球員的成績
                         existed_fielder_stats = []
 
                         # 有成績就遍歷抓取出來的成績，然後加到陣列裡
