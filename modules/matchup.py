@@ -1,3 +1,7 @@
+# Modified date: 2024.2.16
+# Author: Steven
+# Description: 處理matchup路由中
+# 所有使用到的功能
 from flask import Blueprint, current_app, request, render_template
 from threading import Lock
 from .common import *

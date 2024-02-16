@@ -107,7 +107,6 @@ $(document).ready(function () {
     login = $("#login").text();
 
     // 每個user進來，預設都會先顯示Players table
-    $("#draft").css("visibility", "hidden");
     $("#teamsTable").css("display", "none");
     $("#draftResultsTable").css("display", "none");
     $("#standingsTable").css("display", "none");
@@ -117,7 +116,11 @@ $(document).ready(function () {
     let showHead = $("#showHead");
     let showBody = $("#showBody");
     for (let i = 0; i < 11; i++) {
+        // 若為投手，該欄位會是empty
+        // 若為打者，該欄位會是PA
         if (selected.children().eq(3).text()) {
+            // Head為i+2, Body為i+3的原因是
+            // Body多了第一欄位的playerID
             showHead.children().eq(i + 1).text(playersHead.children().eq(i + 2).text());
             showBody.children().eq(i + 1).text(selected.children().eq(i + 3).text());
         }
@@ -131,6 +134,7 @@ $(document).ready(function () {
 
     //#region 處理不同帳號登入選秀頁面後，在account bar的CSS
     rounds = $(".round");
+    // 標示出每一輪中，自己位於哪一個選秀順位
     for (i = 0; i < rounds.length; i++) {
         round = rounds.eq(i);
         orders = round.children();
@@ -147,7 +151,8 @@ $(document).ready(function () {
     $("#turnIndicator").addClass("clockNotMyTurn");
     $("#turnIndicator").text("The draft will start soon.");
 
-    // 從伺服器端取得選秀時間
+    // 發送jQuery的簡化版AJAX請求
+    // 目標是從server端取得選秀時間
     let startTime, remainSecond, remainMinute;
     $.getJSON("/draft/time", function (data) {
         const time = new Date(data.Time);

@@ -51,6 +51,7 @@ def myteam():
         dropPlayerID = int(request.form["dropPlayer"])
         dropPlayerType = request.form["dropPlayerType"]
         with engine.begin() as connection:
+            # 此處add進來的球員，round不會有值，依然會是NULL
             if addPlayerType == "Fielder":
                 updateStmt = (
                     update(fielderTable)
@@ -64,7 +65,7 @@ def myteam():
                     .values(Account=account)
                 )
             connection.execute(updateStmt)
-
+            # 而drop的球員，只是把Account設成NULL，但round還是原本選秀的順位。
             if dropPlayerType == "Fielder":
                 updateStmt = (
                     update(fielderTable)
@@ -78,6 +79,7 @@ def myteam():
                     .values(Account=None)
                 )
             connection.execute(updateStmt)
+        # 球員交換過後，會再把該帳號的所有球員重新排列一次
         rearrangePlayer(account)
     except KeyError:
         pass

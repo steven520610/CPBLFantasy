@@ -1,3 +1,7 @@
+# Modified date: 2024.2.16
+# Author: Steven
+# Description: 處理draft路由中
+# 所有使用到的功能
 from flask import Blueprint, render_template, request, jsonify
 from .common import db, Account, Fielder, Pitcher, score_player, socketio, read_category
 from .config.info import *

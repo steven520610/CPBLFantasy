@@ -1,3 +1,7 @@
+# Modified date: 2024.2.16
+# Author: Steven
+# Description: 處理player路由中
+# 所有使用到的功能
 from flask import Blueprint, current_app, request, render_template
 from .common import (
     db,
@@ -6,6 +10,7 @@ from .common import (
     Fielder,
     Pitcher,
     score_player,
+    read_category,
     rearrangeDict,
 )
 from sqlalchemy import select
@@ -67,11 +72,13 @@ def player():
     for i, player in enumerate(
         sorted(
             players,
-            key=lambda p: score_player(
-                "Fielder", p, SCORING_FIELDER, selectedFielderCategories
-            )
-            if isinstance(p, Fielder)
-            else score_player("Pitcher", p, SCORING_PITCHER, selectedPitcherCategories),
+            key=lambda p: (
+                score_player("Fielder", p, SCORING_FIELDER, selectedFielderCategories)
+                if isinstance(p, Fielder)
+                else score_player(
+                    "Pitcher", p, SCORING_PITCHER, selectedPitcherCategories
+                )
+            ),
             reverse=True,
         ),
         start=1,
@@ -96,6 +103,9 @@ def player():
     )
 
 
+# 在玩家於player頁面，按下某個球員的+號時
+# 會經由javascript的處理
+# 並利用<a>標籤，來對此路由發出帶有queryString的GET請求
 @playerBP.route("/addplayer", methods=["GET"])
 def addplayer():
     def playersToList(players):
@@ -121,6 +131,9 @@ def addplayer():
             playersList.append(playerDict)
         return playersList
 
+    # 轉換成dict的原因是
+    # JavaScript沒辦法直接使用Python傳過去之某table的物件
+    # 因此要用dict的方式然後再轉成JSON來處理。
     def selectPlayerToDict(player):
         playerDict = {}
         for c in player.__table__.columns:

@@ -1,7 +1,10 @@
 const app = Vue.createApp({
     data() {
         return {
-            // Flask所傳遞
+            // Flask所傳遞給jinja2
+            // 在jinja2內的<script></script>元素內
+            // 先宣告要使用的變數
+            // 才可以在此處使用
             myAccount: myAccount,
             accounts: accounts,
             categories: categories,
@@ -196,28 +199,40 @@ const app = Vue.createApp({
         },
         sortTable(category, type) {
             if (type == "Fielder") {
+                // 已經根據Rank排序了
                 if (this.fielderSortCategory == "current") {
+                    // 又按一次Rank
+                    // reverse
                     if (category == "Rank") {
                         this.fielderOrder *= -1;
                     }
+                    // 按其他column
                     else {
                         this.fielderSortCategory = category;
+                        // 因為打擊數據都是從大排到小(遞減)
                         this.fielderOrder = -1;
                     }
                 }
+                // 目前不是根據Rank排序
                 else {
+                    // 按了同樣column
+                    // reverse
                     if (this.fielderSortCategory == category) {
                         this.fielderOrder *= -1;
                     }
                     else if (category == "Rank") {
                         this.fielderSortCategory = "current";
+                        // Rank會從小到大排(遞增)
                         this.fielderOrder = 1;
                     }
+                    // 其他column
                     else {
                         this.fielderSortCategory = category;
                         this.fielderOrder = -1;
                     }
                 }
+                // js內的sort比較特別
+                // 會利用一個compare function去處理
                 return this.fielders.sort((a, b) => this.fielderOrder * (a[category] - b[category]));
             }
             else if (type == "Pitcher") {

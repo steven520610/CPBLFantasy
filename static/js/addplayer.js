@@ -2,6 +2,9 @@ const app = Vue.createApp({
     data() {
         return {
             // Flask所傳遞
+            // 在jinja2內的<script></script>元素內
+            // 先宣告要使用的變數
+            // 才可以在此處使用
             account: account,
             categories: categories,
             fielders: fielders,
