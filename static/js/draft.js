@@ -60,6 +60,9 @@ $(document).ready(function () {
     // 如此就不需要發送事件給預設(所有伺服器端的路由)，只會發送給/draft，可以減少一些資源
     // 在Flask端也需要做設定
     const socket = io("http://127.0.0.1:5000/draft");
+
+    // server端不用新增一個socket.emit("connect")來處理
+    // 這是只要server回覆一個response(連線成功)，就會執行的callback
     socket.on("connect", function () {
         console.log("Connected to Server!");
     });
@@ -68,9 +71,14 @@ $(document).ready(function () {
     const rankList = [];
 
     //#region 處理整個網頁在選秀時都不會變動的部分
+
     titleName = {}
+    // thead中的tr的第一欄，不像tbody中的tr第一欄為playerID，所以這邊手動assign
     titleName["0"] = "player_ID";
     heads = $("#playersTable thead tr").children();
+    // flag用來區分目前是batter or pitcher
+    // false -> batter
+    // true -> pitcher
     let flag = false;
     for (i = 0; i < heads.length; i++) {
         if (heads.eq(i).text() == "IP") flag = true;
@@ -84,14 +92,21 @@ $(document).ready(function () {
     }
     let totalPicks = Number($(".order").last().text());
     let totalRounds = Math.floor(totalPicks / 4);
+
     //#endregion
 
 
     //#region 處理一加載完網頁，就需要優先加上的CSS。
-    // 此處為playersTable的第一列、account bar的第一個玩家
+    // 像是playersTable的第一列、account bar的第一個玩家
+
+    // 每個user進來都會先自動選取第一列
     $("#playersTable tbody").children().first().addClass("selected");
+
+    // 每個user進來都可以清楚看到第一個pick的人是誰以及順位是多少
     $(".round").first().children().first().addClass("turn");
     login = $("#login").text();
+
+    // 每個user進來，預設都會先顯示Players table
     $("#draft").css("visibility", "hidden");
     $("#teamsTable").css("display", "none");
     $("#draftResultsTable").css("display", "none");

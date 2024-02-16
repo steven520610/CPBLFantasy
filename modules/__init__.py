@@ -1,4 +1,4 @@
-# Modified date: 2023.2.14
+# Modified date: 2024.2.16
 # Author: Steven
 # Description: 利用Python獨特的方法，來初始化modules這個package，
 # 決定app在此處如何建立app物件
@@ -33,13 +33,19 @@ def create_app():
     # 因此需要透過這個方法，手動建立一個應用上下文(application context)
     # 否則會報RunTime Error
     with app.app_context():
+        # 在設定完app的configuration後
+        # 分別啟動db, socket對此app的服務
+
         # 此處分別用兩種方式建立與db的連結
         # 第一個是用Core component
         init_db()
         # 第二個是ORM component
         # 兩者會處理不同的任務，主要原因是有些操作只能透過其中一個component來完成。
         db.init_app(app)
-        socketio.init_app(app, cors_allowed_origins="http://127.0.0.1:5000")
+
+        socketio.init_app(
+            app, cors_allowed_origins="http://127.0.0.1:5000", ping_timeout=60
+        )
         # 每一次重啟app，都會做此步驟
         # 因為在db內，球員的排列是所有球員依據隊伍去排的，各個帳號所選的球員也是依照這個方法排列
         # 然而在登入後，我想要在user進到自己所選球員的頁面時，就顯示排列正確的roster

@@ -34,7 +34,7 @@
                     
                 </div>
             </div>
-                <div id="turnIndicator">The draft will start soon.</div>
+                <div id="turnIndicator"></div>
         </div>
 
 
@@ -42,17 +42,17 @@
         <div id="showPlayer">
             <div id="showTop">
                 <div id="img">
-                    <img src="/img/player/蘇智傑1474.png" id="playerImg">
+                    <img src="/img/player/鋼龍6497.png" id="playerImg">
                 </div>
                 
                 <div id="playerInfoBar">
-                    <div class="name">蘇智傑</div>
-                    <div class="info">UL | OF</div>
+                    <div class="name">鋼龍</div>
+                    <div class="info">WD | SP</div>
                 </div>
 
                 <div id="draftBar">
                     <button id="draft">
-                        <img src={{url_for("static", filename="img/draft.png")}} alt="draft">
+                        <img src={{ url_for("static", filename="img/draft.png") }} alt="draft">
                     </button>
                 </div>
             </div>
@@ -107,6 +107,7 @@
                 
                 {% set ns = namespace(count=0) %}
                 <span id="roundTitle"><h2>Drafting now!</h2></span>
+                {# 依選秀要選幾輪決定 #}
                 {% for i in range(23) %}
                     <div class="round">
                         {% if i is even %}
@@ -119,6 +120,7 @@
                                 </p>
                             {% endfor %}
                         {% else %}
+                                {# 用reverse filter的原因是選秀模式為S型選秀 #}
                             {% for account in accounts|reverse %}
                                 {% set ns.count = ns.count + 1 %}
                                 <p>
@@ -129,6 +131,7 @@
                             {% endfor %}
                         {% endif %}
                     </div>
+                    {# 最後一輪時，不需要加下一次選的輪次，一樣根據要選幾輪調整 #}
                     {% if i < 22 %}
                         <h3 class="line">
                             <span class="roundSeperator"> Round {{ i+2 }} </span>
@@ -180,7 +183,8 @@
                                     data-content="{{ " CTB - " + player.position if player.team == "中信兄弟" 
                                                 else " RKM - " + player.position if player.team == "樂天桃猿" 
                                                 else " WD - " + player.position if player.team == "味全龍" 
-                                                else " FG - " + player.position if player.team == "富邦悍將" 
+                                                else " FG - " + player.position if player.team == "富邦悍將"
+                                                else " TSG - " + player.position if player.team == "台鋼雄鷹" 
                                                 else " UL - " + player.position  }}">{{ player.name }}</td>
                                     <td class="stat">{{ player.PA }}</td>
                                     <td class="stat">{{ player.AB }}</td>
@@ -206,6 +210,7 @@
                                                 else " RKM - " + player.position if player.team == "樂天桃猿" 
                                                 else " WD - " + player.position if player.team == "味全龍" 
                                                 else " FG - " + player.position if player.team == "富邦悍將" 
+                                                else " TSG - " + player.position if player.team == "台鋼雄鷹" 
                                                 else " UL - " + player.position  }}">{{ player.name }}</td>
                                     <td class="empty"></td>
                                     <td class="empty"></td>

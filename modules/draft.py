@@ -1,15 +1,16 @@
 from flask import Blueprint, render_template, request, jsonify
-from .common import db, Account, Fielder, Pitcher, score_player, socketio
+from .common import db, Account, Fielder, Pitcher, score_player, socketio, read_category
 from .config.info import *
 
 draftBP = Blueprint("draft", __name__)
 
 
 @draftBP.context_processor
-def utility_processor():
+def utility_processor():  # 與template_filter相同，函數名稱只是讓開發者知道其用途而已
     def get_attribute(obj, attr):
         return getattr(obj, attr)
 
+    # 在jinja2中，get_attribute(前方藍色，代表名稱)會使用get_attribute(後方黃色，代表函數)
     return dict(get_attribute=get_attribute)
 
 
@@ -25,20 +26,22 @@ def draft():
     fielders = db.session.query(Fielder).all()
     pitchers = db.session.query(Pitcher).all()
 
+    # 此處是兩個結果回傳的都是list，所以可以相加
     players = fielders + pitchers
 
     for i, player in enumerate(
         sorted(
             players,
-            key=lambda p: score_player(
-                "Fielder", p, SCORING_FIELDER, fielder_categories
-            )
-            if isinstance(p, Fielder)
-            else score_player("Pitcher", p, SCORING_PITCHER, pitcher_categories),
+            key=lambda p: (
+                score_player("Fielder", p, SCORING_FIELDER, fielder_categories)
+                if isinstance(p, Fielder)
+                else score_player("Pitcher", p, SCORING_PITCHER, pitcher_categories)
+            ),
             reverse=True,
         ),
         start=1,
     ):
+        # 新增一個 "臨時屬性"，用來排序分數用。
         player.Rank = i
     players = sorted(players, key=lambda player: player.Rank, reverse=False)
     positions = {
@@ -91,7 +94,7 @@ def time():
     from datetime import datetime, timedelta
 
     # draft_time = datetime.now() + timedelta(hours=1)
-    draft_time = datetime(2023, 8, 25, 13, 53, 45)
+    draft_time = datetime(2024, 2, 16, 15, 23, 0)
     return jsonify({"Time": draft_time.isoformat("T", "seconds")})
 
 

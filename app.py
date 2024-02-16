@@ -1,4 +1,4 @@
-# Modified date: 2023.12.30
+# Modified date: 2024.2.16
 # Author: Steven
 # Description: 用來啟動網頁app的server
 
@@ -15,4 +15,5 @@ def page_not_found(e):
 
 
 if __name__ == "__main__":
-    app.run()
+    # 使用socketio來啟動app
+    socketio.run(app)
