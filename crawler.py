@@ -69,6 +69,57 @@ class Crawler:
         player_webpage = "https://www.cpbl.com.tw/player"
         self.driver.get(player_webpage)
 
+        def form_final_stats_dict(stats_dict, stats_elements, player_category):
+            if player_category == "打擊成績":
+                if stats_elements == "empty":
+                    # 依序取出db內的column所需要的數據
+                    for key, _ in DB_FIELDER_CATEGORIES_TO_WEB_STATS_DICT.items():
+                        if key in ["AVG", "OBP", "SLG", "OPS"]:
+                            stats_dict[key] = float(0)
+                        elif key == "IBB":
+                            stats_dict[key] = 0
+                        else:
+                            stats_dict[key] = 0
+                else:
+                    # 依序取出db內的column所需要的數據
+                    for key, value in DB_FIELDER_CATEGORIES_TO_WEB_STATS_DICT.items():
+                        if key in ["AVG", "OBP", "SLG", "OPS"]:
+                            stats_dict[key] = float(stats_elements[value].text)
+                        elif key == "IBB":
+                            stats_dict[key] = int(stats_elements[value].text[1:-1])
+                        else:
+                            stats_dict[key] = int(stats_elements[value].text)
+                return stats_dict, "Fielder"
+            else:
+                if stats_elements == "empty":
+                    for key, _ in DB_PITCHER_CATEGORIES_TO_WEB_STATS_DICT.items():
+                        if key in ["IP", "ERA", "WHIP"]:
+                            stats_dict[key] = float(0)
+                        elif key == "SV+H":
+                            stats_dict[key] = 0
+                        else:
+                            stats_dict[key] = 0
+                    # 官網沒有，但此聯盟有比的項目
+                    # 後面再處理
+                    stats_dict["K/9"] = float(0)
+                    stats_dict["QS"] = 0
+                else:
+                    for key, value in DB_PITCHER_CATEGORIES_TO_WEB_STATS_DICT.items():
+                        if key in ["IP", "ERA", "WHIP"]:
+                            stats_dict[key] = float(stats_elements[value].text)
+                        elif key == "SV+H":
+                            stats_dict[key] = int(stats_elements[value[0]].text) + int(
+                                stats_elements[value[1]].text
+                            )
+                        else:
+                            stats_dict[key] = int(stats_elements[value].text)
+
+                    # 官網沒有，但此聯盟有比的項目
+                    # 後面再處理
+                    stats_dict["K/9"] = update_K9(stats_dict["IP"], stats_dict["K"])
+                    stats_dict["QS"] = 0
+                return stats_dict, "Pitcher"
+
         def stats(href):
             """
             爬取球員數據
@@ -120,100 +171,94 @@ class Crawler:
             2. 3個DistTitle: 專職野手、投手的球員，大多數球員落在此類
             3. 4個DistTitle: 野手上丘投過球、投手上場打擊過的二刀流球員
             """
-            # 用兩個變數，區分該球員是否
-            # 有成績
-            # 為二刀流
-            # 後續會分開處理
-            recorded = True if len(dt_elements) > 2 else False
+            # 用一個變數，區分該球員是否為二刀流
             twoway = True if len(dt_elements) == 4 else False
 
-            # 尚未在一軍有成績就跳過此球員，不加到db內
-            if not recorded:
-                return
             # -------------------------------------------------------------------------------------
-            # 先新增球員編號、名字這2個無論哪種球員都有的屬性到dict內
+            # 先新增球員編號、名字、球隊這些個無論哪種球員都有的屬性到dict內
             stats_dict = {}
             stats_dict["player_id"] = player_id
             stats_dict["name"] = name
+
+            # 處理球隊名稱的部分
+            team = p_b_element.find_element(By.CLASS_NAME, "team").text
+            # 把有些球員在資料卡中寫 -> "隊伍二軍"的二軍拿掉
+            team = team.replace("二軍", "")
+            stats_dict["team"] = team
             # -------------------------------------------------------------------------------------
+
+            # 正常球員
             if not twoway:
-                # Player stats
+                # 利用index取出第一個有紀錄成績的Table
+                # 因為此處不是二刀流，所以
+                # 打擊成績 -> 打者
+                # 投球成績 -> 投手
                 f_dt_element = dt_elements[0]  # f_dt_element = first DistTitle element
 
+                # 取出該球員屬於野手 or 投手
+                # 野手的dist_title[0]標籤文字為"打擊成績"
+                # 投手的dist_title[0]標籤文字為"投球成績"
+                player_category = f_dt_element.find_element(By.TAG_NAME, "h3").text
+
+                # 和上面取DistTable類似的意思
                 # 用find_element代表只會取第一個RecordTable
                 # 亦即 打擊/投球 成績
                 rt_element = self.second_driver.find_element(
                     By.CLASS_NAME, "RecordTable"
                 )  # rt_element: RecordTable element
-                year_elements = rt_element.find_elements(By.CLASS_NAME, "year")
 
+                # 接下來處理年份
+                year_elements = rt_element.find_elements(By.CLASS_NAME, "year")
                 # 取Total的上一個，代表最近一個球季的成績
-                # 若沒有2023的成績，就忽略。
+                # 若沒有2023的成績，從原本直接return
+                # 改成新增全部為0的數據。
                 year = year_elements[-2].text
                 if year != "2023":
-                    return
+                    stats_dict, table_name = form_final_stats_dict(
+                        stats_dict, "empty", player_category
+                    )
+                else:
+                    tr_elements = rt_element.find_elements(
+                        By.TAG_NAME, "tr"
+                    )  # tr_element = table row element
 
-                tr_elements = rt_element.find_elements(
-                    By.TAG_NAME, "tr"
-                )  # tr_element = table row element
+                    # 同樣取Total的上一個
+                    tr_2023 = tr_elements[-2]
+                    stats_elements = tr_2023.find_elements(By.CLASS_NAME, "num")
 
-                # 同樣取Total的上一個
-                tr_2023 = tr_elements[-2]
-                stats_elements = tr_2023.find_elements(By.CLASS_NAME, "num")
-
-                # 取出該球員屬於野手 or 投手
-                player_category = f_dt_element.find_element(By.TAG_NAME, "h3").text
-
-                # 野手的dist_title[0]標籤文字為"打擊成績"
-                # 投手的dist_title[0]標籤文字為"投球成績"
-                if player_category == "打擊成績":
-                    # 取出該球員所屬的球隊
-                    team = rt_element.find_elements(By.CLASS_NAME, "team")[-2].text
-                    stats_dict["team"] = team
-
-                    # 依序取出db內的column所需要的數據
-                    for key, value in DB_FIELDER_CATEGORIES_TO_WEB_STATS_DICT.items():
-                        if key in ["AVG", "OBP", "SLG", "OPS"]:
-                            stats_dict[key] = float(stats_elements[value].text)
-                        elif key == "IBB":
-                            stats_dict[key] = int(stats_elements[value].text[1:-1])
-                        else:
-                            stats_dict[key] = int(stats_elements[value].text)
-
-                    table_name = "Fielder"
-
-                elif player_category == "投球成績":
-                    team = rt_element.find_elements(By.CLASS_NAME, "team")[-2].text
-                    stats_dict["team"] = team
-
-                    for key, value in DB_PITCHER_CATEGORIES_TO_WEB_STATS_DICT.items():
-                        if key in ["IP", "ERA", "WHIP"]:
-                            stats_dict[key] = float(stats_elements[value].text)
-                        elif key == "SV+H":
-                            stats_dict[key] = int(stats_elements[value[0]].text) + int(
-                                stats_elements[value[1]].text
-                            )
-                        else:
-                            stats_dict[key] = int(stats_elements[value].text)
-
-                    # 官網沒有，但此聯盟有比的項目
-                    # 後面再處理
-                    stats_dict["K/9"] = update_K9(stats_dict["IP"], stats_dict["K"])
-                    stats_dict["QS"] = 0
-
-                    table_name = "Pitcher"
+                    stats_dict, table_name = form_final_stats_dict(
+                        stats_dict, stats_elements, player_category
+                    )
 
                 table = Table(table_name, db, autoload_with=engine)
-
-                with engine.begin() as connection:
-                    insert_statement = insert(table).values(stats_dict)
-                    connection.execute(insert_statement)
+                with engine.connect() as connection:
+                    transaction = connection.begin()
+                    try:
+                        select_statement = select(table).where(
+                            table.c.player_id == stats_dict["player_id"]
+                        )
+                        result = connection.execute(select_statement).fetchone()
+                        if result:
+                            statement = (
+                                update(table)
+                                .where(table.c.player_id == stats_dict["player_id"])
+                                .values(stats_dict)
+                            )
+                        else:
+                            statement = insert(table).values(stats_dict)
+                        connection.execute(statement)
+                        transaction.commit()
+                    except:
+                        transaction.rollback()
+                        raise RuntimeError
 
                 print("{} {} 新增完成...".format(team, name))
                 print("-" * 20)
             # ------------------------------------------------------------------------------------
             # 二刀流球員
-            if twoway:
+            else:
+                # stats_dict for 打擊成績
+                # extra_stats_dict for 投球成績
                 extra_stats_dict = stats_dict.copy()
 
                 rt_elements = self.second_driver.find_elements(
@@ -223,88 +268,71 @@ class Crawler:
                 for i in range(2):
                     rt_element = rt_elements[i]
                     year_elements = rt_element.find_elements(By.CLASS_NAME, "year")
-
                     year = year_elements[-2].text
+
+                    # 加入2023年沒有出賽成績的球員
                     if year != "2023":
-                        recorded = False
-                        continue
+                        if i == 0:
+                            stats_dict, table_name = form_final_stats_dict(
+                                stats_dict, "empty", "打擊成績"
+                            )
+                        else:
+                            stats_dict, table_name = form_final_stats_dict(
+                                extra_stats_dict, "empty", "投球成績"
+                            )
+                    # 2023有成績的球員
                     else:
-                        recorded = True
+                        tr_elements = rt_element.find_elements(
+                            By.TAG_NAME, "tr"
+                        )  # tr_element = table row element
 
-                    tr_elements = rt_element.find_elements(
-                        By.TAG_NAME, "tr"
-                    )  # tr_element = table row element
+                        tr_2023 = tr_elements[-2]
+                        stats_elements = tr_2023.find_elements(By.CLASS_NAME, "num")
+                        if i == 0:
+                            stats_dict, table_name = form_final_stats_dict(
+                                stats_dict, stats_elements, "打擊成績"
+                            )
+                        else:
+                            stats_dict, table_name = form_final_stats_dict(
+                                extra_stats_dict, stats_elements, "投球成績"
+                            )
 
-                    tr_2023 = tr_elements[-2]
-                    stats_elements = tr_2023.find_elements(By.CLASS_NAME, "num")
-
-                    # 打擊
-                    if i == 0:
-                        # 取出該球員所屬的球隊
-                        team = rt_element.find_elements(By.CLASS_NAME, "team")[-2].text
-                        stats_dict["team"] = team
-
-                        for (
-                            key,
-                            value,
-                        ) in DB_FIELDER_CATEGORIES_TO_WEB_STATS_DICT.items():
-                            if key in ["AVG", "OBP", "SLG", "OPS"]:
-                                stats_dict[key] = float(stats_elements[value].text)
-                            elif key == "IBB":
-                                stats_dict[key] = int(stats_elements[value].text[1:-1])
-                            else:
-                                stats_dict[key] = int(stats_elements[value].text)
-
-                        table = Table("Fielder", db, autoload_with=engine)
-                        with engine.begin() as connection:
-                            insert_statement = insert(table).values(stats_dict)
-                            connection.execute(insert_statement)
-                    # 投球
-                    else:
-                        # 取出該球員所屬的球隊
-                        team = rt_element.find_elements(By.CLASS_NAME, "team")[-2].text
-                        extra_stats_dict["team"] = team
-
-                        for (
-                            key,
-                            value,
-                        ) in DB_PITCHER_CATEGORIES_TO_WEB_STATS_DICT.items():
-                            if key in ["IP", "ERA", "WHIP"]:
-                                extra_stats_dict[key] = float(
-                                    stats_elements[value].text
+                    table = Table(table_name, db, autoload_with=engine)
+                    with engine.connect() as connection:
+                        transaction = connection.begin()
+                        try:
+                            select_statement = select(table).where(
+                                table.c.player_id == stats_dict["player_id"]
+                            )
+                            result = connection.execute(select_statement).fetchone()
+                            if result:
+                                statement = (
+                                    update(table)
+                                    .where(table.c.player_id == stats_dict["player_id"])
+                                    .values(stats_dict)
                                 )
-                            elif key == "SV+H":
-                                extra_stats_dict[key] = int(
-                                    stats_elements[value[0]].text
-                                ) + int(stats_elements[value[1]].text)
                             else:
-                                extra_stats_dict[key] = int(stats_elements[value].text)
-
-                        extra_stats_dict["K/9"] = update_K9(
-                            extra_stats_dict["IP"], extra_stats_dict["K"]
-                        )
-                        extra_stats_dict["QS"] = 0
-
-                        table = Table("Pitcher", db, autoload_with=engine)
-                        with engine.begin() as connection:
-                            insert_statement = insert(table).values(extra_stats_dict)
-                            connection.execute(insert_statement)
-
-                    if recorded:
-                        print("{} {} 新增完成...".format(team, name))
-                        print("-" * 20)
+                                statement = insert(table).values(stats_dict)
+                            connection.execute(statement)
+                            transaction.commit()
+                        except:
+                            transaction.rollback()
+                            raise RuntimeError
+                    print("{} {} 新增完成...".format(team, name))
+                    print("-" * 20)
 
         # 尋找球員點將錄中，每個要點擊的連結
         # 先定位到"各個球團"
         player_list_elements = self.driver.find_elements(By.CLASS_NAME, "PlayersList")
-        for player_list_element in player_list_elements:
-            a_elements = player_list_element.find_elements(By.TAG_NAME, "a")
-            # 接著再從各球團，定位到各個球員
-            for i in range(len(a_elements)):
-                print(i + 1)
-                a_element = a_elements[i]
-                href = a_element.get_attribute("href")
-                stats(href)
+        player_list_element = player_list_elements[1]
+        # for player_list_element in player_list_elements:
+        a_elements = player_list_element.find_elements(By.TAG_NAME, "a")
+        # 接著再從各球團，定位到各個球員
+        for i in range(len(a_elements)):
+            print(i + 1)
+            a_element = a_elements[i]
+            href = a_element.get_attribute("href")
+            stats(href)
         # 最後再關掉第二個driver
         self.second_driver.quit()
 
