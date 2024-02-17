@@ -469,7 +469,7 @@ def todayupdate():
                         adjustUnadditive(type, processDict, True, False)
                         # print(processDict)
 
-                        # 已存在更新db即可
+                        # 已存在的話，更新整季成績table內的數據
                         if SelectPlayer:
                             update_stmt = (
                                 update(players)
@@ -477,7 +477,7 @@ def todayupdate():
                                 .values(processDict)
                             )
                             connection.execute(update_stmt)
-                        # 不存在新增球員到db
+                        # 不存在的話，新增今日球員到整季成績的table內
                         else:
                             # Account, position, round欄位可以為null，所以不需要設定
                             insert_stmt = insert(players).values(processDict)
