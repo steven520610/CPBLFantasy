@@ -58,28 +58,36 @@
                         <div class="filter" v-show="statusShow">
                             <label for="status" class="label">Status</label>
                             <select v-model="statusSelected" id="status">
-                                <option value="ALL">All Players</option>
-                                <option value="FAO">Free Agents Only</option>
-                                <option value="ATP">All Taken Players</option>
-                                {% for account in accounts %}
-                                    <option value={{ account }}>{{ account }}</option>
-                                {% endfor %}
+                                <optgroup label="Total">
+                                    <option value="ALL">All Players</option>
+                                    <option value="FAO">Free Agents Only</option>
+                                    <option value="ATP">All Taken Players</option>
+                                </optgroup>
+                                <optgroup label="Account">
+                                    {% for account in accounts %}
+                                        <option value={{ account }}>{{ account }}</option>
+                                    {% endfor %}
+                                </optgroup>
                             </select>
                         </div>
                         <div class="filter" v-show="positionShow">
                             <label for="position" class="label">Position</label>
                             <select v-model="positionSelected" id="position">
-                                <option value="AB">All Batters</option>
-                                <option value="AP">All Pitchers</option>
-                                <option value="C">C</option>
-                                <option value="1B">1B</option>
-                                <option value="2B">2B</option>
-                                <option value="3B">3B</option>
-                                <option value="SS">SS</option>
-                                <option value="OF">OF</option>
-                                <option value="Util">Util</option>
-                                <option value="SP">SP</option>
-                                <option value="RP">RP</option>
+                                <optgroup label="Batters">
+                                    <option value="AB">All Batters</option>
+                                    <option value="C">C</option>
+                                    <option value="1B">1B</option>
+                                    <option value="2B">2B</option>
+                                    <option value="3B">3B</option>
+                                    <option value="SS">SS</option>
+                                    <option value="OF">OF</option>
+                                    <option value="Util">Util</option>
+                                </optgroup>
+                                <optgroup label="Pitchers">
+                                    <option value="AP">All Pitchers</option>
+                                    <option value="SP">SP</option>
+                                    <option value="RP">RP</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div class="filter" v-show="statsShow">

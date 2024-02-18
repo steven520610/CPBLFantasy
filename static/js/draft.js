@@ -91,8 +91,10 @@ $(document).ready(function () {
         else titleName[i + 1] = heads.eq(i).text();
     }
     let totalPicks = Number($(".order").last().text());
-    let totalRounds = Math.floor(totalPicks / 4);
-
+    let totalPlayers = Number($(".round").first().children().length);
+    let totalRounds = Math.floor(totalPicks / totalPlayers);
+    let currentRound, currentPick, currentOverall;
+    let count = 0;
     //#endregion
 
 
@@ -340,6 +342,12 @@ $(document).ready(function () {
         socket.emit("update", playerData);
         // 更新計時器
         socket.emit("draftTimer", playerData["auto"]);
+
+        // 最後一個玩家選擇完，要通知後端進行一次rearrange
+        // 否則選秀完，沒重開的話，到myteam, matchup會沒東西
+        if (currentOverall == totalPicks) {
+            socket.emit("rearrange", true);
+        }
     });
     //#endregion
 
@@ -437,35 +445,25 @@ $(document).ready(function () {
         }
 
         // 處理每輪、每個順位，左上角的輪次順位說明
-        let roundNumber, pickNumber, overallNumber
-        roundNumber = Math.floor((Number($(".order").first().text()) - 1) / 3) + 1;
-        $(".clockRound").text("Round " + roundNumber);
+        currentRound = Math.floor((Number($(".order").first().text()) - 1) / totalPlayers) + 1;
+        $(".clockRound").text("Round " + currentRound);
 
-        pickNumber = $(".round").first().children().length;
-        switch (pickNumber) {
+        currentPick = $(".round").first().children().length;
+        $(".clockPick").text("Pick " + totalPlayers - currentPick + 1);
+
+        currentOverall = Number($(".order").first().text());
+        switch (currentOverall % 10) {
             case 1:
-                $(".clockPick").text("Pick 3");
+                $("#clockOverall").text(currentOverall + "st Overall");
                 break;
             case 2:
-                $(".clockPick").text("Pick 2");
+                $("#clockOverall").text(currentOverall + "nd Overall");
                 break;
             case 3:
-                $(".clockPick").text("Pick 1");
-                break;
-        }
-        overallNumber = Number($(".order").first().text());
-        switch (overallNumber % 10) {
-            case 1:
-                $("#clockOverall").text(overallNumber + "st Overall");
-                break;
-            case 2:
-                $("#clockOverall").text(overallNumber + "nd Overall");
-                break;
-            case 3:
-                $("#clockOverall").text(overallNumber + "rd Overall");
+                $("#clockOverall").text(currentOverall + "rd Overall");
                 break;
             default:
-                $("#clockOverall").text(overallNumber + "th Overall");
+                $("#clockOverall").text(currentOverall + "th Overall");
         }
     });
 

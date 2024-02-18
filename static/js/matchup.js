@@ -577,8 +577,10 @@ $(document).ready(function () {
                     totalFielder.children().eq(i + 1).text("-/-");
                     totalFielder.children().eq(i + 26).text("-/-");
                 }
-                totalFielder.children().eq(i + 1).text("-");
-                totalFielder.children().eq(i + 26).text("-");
+                else {
+                    totalFielder.children().eq(i + 1).text("-");
+                    totalFielder.children().eq(i + 26).text("-");
+                }
             }
         }
         // 自己有、對手無

@@ -192,9 +192,12 @@ def matchup():
                 # 檢查每個自己選到的球員，是否存在TodayFielder這個Table
                 # 也就是檢查今天有沒有上場
                 with engine.begin() as connection:
-                    query = select(TodayFielder).where(
-                        TodayFielder.c.player_id == fielder.player_id
-                    )
+                    try:
+                        query = select(TodayFielder).where(
+                            TodayFielder.c.player_id == fielder.player_id
+                        )
+                    except AttributeError:
+                        continue
                     result = connection.execute(query)
                     fielder_stats = result.fetchone()
 
@@ -225,9 +228,12 @@ def matchup():
                 pitcher.inlineup = False
             else:
                 with engine.begin() as connection:
-                    query = select(TodayPitcher).where(
-                        TodayPitcher.c.player_id == pitcher.player_id
-                    )
+                    try:
+                        query = select(TodayPitcher).where(
+                            TodayPitcher.c.player_id == pitcher.player_id
+                        )
+                    except AttributeError:
+                        continue
                     result = connection.execute(query)
                     pitcher_stats = result.fetchone()
                     if not pitcher_stats:

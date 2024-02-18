@@ -1,9 +1,18 @@
-# Modified date: 2024.2.16
+# Modified date: 2024.2.18
 # Author: Steven
 # Description: 處理draft路由中
 # 所有使用到的功能
 from flask import Blueprint, render_template, request, jsonify
-from .common import db, Account, Fielder, Pitcher, score_player, socketio, read_category
+from .common import (
+    db,
+    Account,
+    Fielder,
+    Pitcher,
+    score_player,
+    socketio,
+    read_category,
+    rearrangeAll,
+)
 from .config.info import *
 
 draftBP = Blueprint("draft", __name__)
@@ -98,7 +107,7 @@ def time():
     from datetime import datetime, timedelta
 
     # draft_time = datetime.now() + timedelta(hours=1)
-    draft_time = datetime(2024, 2, 16, 15, 23, 0)
+    draft_time = datetime(2024, 2, 18, 21, 41, 10)
     return jsonify({"Time": draft_time.isoformat("T", "seconds")})
 
 
@@ -156,6 +165,13 @@ def draftupdate(data):
     except ValueError as e:
         data["message"] = "Failed!"
         socketio.emit("update", data, namespace="/draft")
+
+
+# 在最後一個順位選完之後
+# 該client會發送一個rearrange事件
+@socketio.on("rearrange", namespace="/draft")
+def rearrange(data):
+    rearrangeAll()
 
 
 # 選秀頁面，處理user端按下Teams選項後，傳送AJAX請求

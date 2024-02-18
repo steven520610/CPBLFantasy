@@ -171,6 +171,9 @@ const app = Vue.createApp({
                 case "味全龍":
                     team = "WD - ";
                     break;
+                case "台鋼雄鷹":
+                    team = "TSG - ";
+                    break;
                 case "統一7-ELEVEn獅":
                     team = "UL - ";
                     break;
