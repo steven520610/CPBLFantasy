@@ -37,7 +37,7 @@ def background_update():
         try:
             global started
             while started:
-                socketio.sleep(10)
+                socketio.sleep(60)
                 # 因為disconnect後
                 # 雖然started已經設為False了
                 # 但有可能已經進入while loop
@@ -176,9 +176,8 @@ def matchup():
 
     # Fielders
     for key, _ in Fielders.items():
-        count = 0
 
-        # 存放此帳號所選球員的今日成績
+        # 存放此帳號所選球員的今日成績，無論有無符合格子的排列
         existed_fielders_stats = []
 
         # 遍歷所有選的球員
@@ -188,6 +187,7 @@ def matchup():
             # 因此這邊是建立一個臨時屬性，並在後續使用
             if not table_exist:
                 fielder.inlineup = False
+                existed_fielder_stats = None
             else:
                 # 檢查每個自己選到的球員，是否存在TodayFielder這個Table
                 # 也就是檢查今天有沒有上場
@@ -197,35 +197,37 @@ def matchup():
                             TodayFielder.c.player_id == fielder.player_id
                         )
                     except AttributeError:
+                        existed_fielder_stats = None
+                        existed_fielders_stats.append(existed_fielder_stats)
                         continue
                     result = connection.execute(query)
                     fielder_stats = result.fetchone()
 
                     if not fielder_stats:
                         fielder.inlineup = False
+                        existed_fielder_stats = None
                     else:
                         fielder.inlineup = True
-                        # 存放該次迭代中，該球員的成績
                         existed_fielder_stats = []
 
                         # 有成績就遍歷抓取出來的成績，然後加到陣列裡
                         for i in range(len(categories["T_F"])):
                             existed_fielder_stats.append(fielder_stats[i + 3])
 
-                        # 最後把此球員的成績加到此帳號所選的球員內
-                        existed_fielders_stats.append(existed_fielder_stats)
+            # 最後把此球員的成績加到此帳號所選的球員內
+            existed_fielders_stats.append(existed_fielder_stats)
             fielder.player_id = str(fielder.player_id).rjust(4, "0")
-            count += 1
+
         FieldersStats[key] = existed_fielders_stats
-        FieldersCount[key] = count
+        FieldersCount[key] = len(existed_fielders_stats)
 
     # Pitchers
     for key, _ in Pitchers.items():
-        count = 0
         existed_pitchers_stats = []
         for pitcher in Pitchers[key]:
             if not table_exist:
                 pitcher.inlineup = False
+                existed_pitcher_stats = None
             else:
                 with engine.begin() as connection:
                     try:
@@ -233,22 +235,23 @@ def matchup():
                             TodayPitcher.c.player_id == pitcher.player_id
                         )
                     except AttributeError:
+                        existed_pitcher_stats = None
+                        existed_pitchers_stats.append(existed_pitcher_stats)
                         continue
                     result = connection.execute(query)
                     pitcher_stats = result.fetchone()
                     if not pitcher_stats:
                         pitcher.inlineup = False
+                        existed_pitcher_stats = None
                     else:
                         pitcher.inlineup = True
                         existed_pitcher_stats = []
                         for i in range(len(categories["T_P"])):
                             existed_pitcher_stats.append(pitcher_stats[i + 3])
-                        existed_pitchers_stats.append(existed_pitcher_stats)
-
+            existed_pitchers_stats.append(existed_pitcher_stats)
             pitcher.player_id = str(pitcher.player_id).rjust(4, "0")
-            count += 1
         PitchersStats[key] = existed_pitchers_stats
-        PitchersCount[key] = count
+        PitchersCount[key] = len(existed_pitchers_stats)
 
     return render_template(
         "matchup.html",
