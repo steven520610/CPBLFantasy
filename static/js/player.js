@@ -200,6 +200,8 @@ const app = Vue.createApp({
                 return this.categories["S_P"].includes(category);
             }
         },
+        // 主要是利用JavaScript特殊的排序方法 -> compare function，來對元素做排序
+        // 而不是像draft頁面那樣用類似Bubble Sort的方式。
         sortTable(category, type) {
             if (type == "Fielder") {
                 // 已經根據Rank排序了

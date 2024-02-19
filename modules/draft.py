@@ -107,7 +107,7 @@ def time():
     from datetime import datetime, timedelta
 
     # draft_time = datetime.now() + timedelta(hours=1)
-    draft_time = datetime(2024, 2, 18, 21, 41, 10)
+    draft_time = datetime(2024, 2, 19, 15, 11, 0)
     return jsonify({"Time": draft_time.isoformat("T", "seconds")})
 
 

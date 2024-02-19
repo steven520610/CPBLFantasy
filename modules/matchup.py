@@ -37,7 +37,7 @@ def background_update():
         try:
             global started
             while started:
-                socketio.sleep(60)
+                socketio.sleep(10)
                 # 因為disconnect後
                 # 雖然started已經設為False了
                 # 但有可能已經進入while loop

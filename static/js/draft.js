@@ -20,8 +20,11 @@ function sortTable(n, direction) {
             break;
         }
         switching = false;
+        // 因為交換完table.rows會更動
+        // 所以每次要交換前，要重新assign
         rows = table.rows;
         // 利用類似Bubble Sort的流程
+        // 每一次switch都會從第一列開始，找尋需要switch的球員
         for (i = 1; i < (rows.length) - 1; i++) {
             r1 = Number(rows[i].getElementsByTagName("td")[n].innerHTML);
             r2 = Number(rows[i + 1].getElementsByTagName("td")[n].innerHTML);
@@ -39,7 +42,11 @@ function sortTable(n, direction) {
             switching = true;
             switchCount++;
         }
+        // 最後一列
         else {
+            // 若當前排序時，沒有做任何交換(Count=0)
+            // 代表應該是排序過的
+            // 如果再點選一次的話，就是換個方向排序
             if (switchCount == 0 && direction == "asc") {
                 direction = "desc";
                 switching = true;
@@ -261,10 +268,10 @@ $(document).ready(function () {
                 break;
             case 2:
                 break;
-            case 18:
+            case 17:
                 sortTable(n + 1, "asc");
                 break;
-            case 19:
+            case 18:
                 sortTable(n + 1, "asc");
                 break;
             default:
@@ -449,7 +456,7 @@ $(document).ready(function () {
         $("#clockRound").text("Round " + currentRound);
 
         currentPick = $(".round").first().children().length;
-        $("#clockPick").text("Pick " + totalPlayers - currentPick + 1);
+        $("#clockPick").text("Pick " + (totalPlayers - currentPick + 1));
 
         currentOverall = Number($(".order").first().text());
         switch (currentOverall % 10) {
