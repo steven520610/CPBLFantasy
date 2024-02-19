@@ -446,10 +446,10 @@ $(document).ready(function () {
 
         // 處理每輪、每個順位，左上角的輪次順位說明
         currentRound = Math.floor((Number($(".order").first().text()) - 1) / totalPlayers) + 1;
-        $(".clockRound").text("Round " + currentRound);
+        $("#clockRound").text("Round " + currentRound);
 
         currentPick = $(".round").first().children().length;
-        $(".clockPick").text("Pick " + totalPlayers - currentPick + 1);
+        $("#clockPick").text("Pick " + totalPlayers - currentPick + 1);
 
         currentOverall = Number($(".order").first().text());
         switch (currentOverall % 10) {
@@ -622,6 +622,9 @@ $(document).ready(function () {
                                 case "富邦悍將":
                                     content += " FG - ";
                                     break;
+                                case "台鋼雄鷹":
+                                    content += " TSG - ";
+                                    break;
                                 default:
                                     content += " UL - ";
                             }
@@ -655,8 +658,11 @@ $(document).ready(function () {
                                 case "富邦悍將":
                                     content += " FG - ";
                                     break;
+                                case "台鋼雄鷹":
+                                    content += " TSG - ";
+                                    break;
                                 default:
-                                    content += " UG - ";
+                                    content += " UL - ";
                             }
                             pitcherRows.eq(j).children().eq(1).attr("data-content", content + pitcher["position"]);
                         }

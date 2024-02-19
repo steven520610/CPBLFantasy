@@ -49,6 +49,9 @@ const app = Vue.createApp({
                 case "味全龍":
                     team = "WD - ";
                     break;
+                case "台鋼雄鷹":
+                    team = "TSG - ";
+                    break;
                 case "統一7-ELEVEn獅":
                     team = "UL - ";
                     break;
@@ -56,7 +59,10 @@ const app = Vue.createApp({
             return team + player.position;
         },
         isFielder(player) {
-            if (player.OPS) {
+            // 這邊條件判斷要更換
+            // 因為若該球員OPS為0，會被判斷成投手
+            // 改成用守備位置
+            if (!(["SP", "RP", "SP, RP"].includes(player.position))) {
                 this.selectPlayerFAType = "Fielder";
                 return true;
             }

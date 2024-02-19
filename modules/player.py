@@ -111,23 +111,26 @@ def addplayer():
     def playersToList(players):
         playersList = []
         for player in players:
-            playerDict = {}
-            for c in player.__table__.columns:
-                if c.name == "db_id":
-                    continue
-                elif c.name == "1H":
-                    playerDict[c.name] = getattr(player, "H1")
-                elif c.name == "2H":
-                    playerDict[c.name] = getattr(player, "H2")
-                elif c.name == "3H":
-                    playerDict[c.name] = getattr(player, "H3")
-                elif c.name == "SV+H":
-                    playerDict[c.name] = getattr(player, "SV_H")
-                elif c.name == "K/9":
-                    playerDict[c.name] = getattr(player, "K9")
-                else:
-                    playerDict[c.name] = getattr(player, c.name)
-            playerDict["show"] = True
+            try:
+                playerDict = {}
+                for c in player.__table__.columns:
+                    if c.name == "db_id":
+                        continue
+                    elif c.name == "1H":
+                        playerDict[c.name] = getattr(player, "H1")
+                    elif c.name == "2H":
+                        playerDict[c.name] = getattr(player, "H2")
+                    elif c.name == "3H":
+                        playerDict[c.name] = getattr(player, "H3")
+                    elif c.name == "SV+H":
+                        playerDict[c.name] = getattr(player, "SV_H")
+                    elif c.name == "K/9":
+                        playerDict[c.name] = getattr(player, "K9")
+                    else:
+                        playerDict[c.name] = getattr(player, c.name)
+                playerDict["show"] = True
+            except AttributeError:
+                continue
             playersList.append(playerDict)
         return playersList
 
