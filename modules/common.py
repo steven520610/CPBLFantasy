@@ -308,13 +308,14 @@ def rearrangePlayer(account):
                                         Used[position]["Count"] += 1
                                         shouldBreak = True
                                         break
-                            if not rearrangeQueryFielders[positionIndex]:
-                                rearrangeQueryFielders[positionIndex] = queryFielders[
-                                    fielderIndex
-                                ]
-                                queryFielders[fielderIndex].assignPosition = True
-                                shouldBreak = True
-                                break
+                            else:
+                                if not rearrangeQueryFielders[positionIndex]:
+                                    rearrangeQueryFielders[positionIndex] = (
+                                        queryFielders[fielderIndex]
+                                    )
+                                    queryFielders[fielderIndex].assignPosition = True
+                                    shouldBreak = True
+                                    break
 
                     # 如果多守位的其中一個守位被成功分配
                     # 就不用再看其他守位了
