@@ -107,25 +107,25 @@ def time():
     from datetime import datetime, timedelta
 
     # draft_time = datetime.now() + timedelta(hours=1)
-    draft_time = datetime(2024, 2, 19, 15, 11, 0)
+    draft_time = datetime(2024, 2, 19, 22, 30, 0)
     return jsonify({"Time": draft_time.isoformat("T", "seconds")})
 
 
-time_flag = False
+# time_flag = False
 
 
 # 選秀頁面，接收user端發出的firstTimer事件
 @socketio.on("firstTimer", namespace="/draft")
 def firstTimer(_):
-    global time_flag
+    # global time_flag
     # 第一個分頁發送emit後
     # 會更改time_flag並等待一秒
     # 弭平不同分頁進入選秀頁面，不到一秒的時間差
     # 讓所有分頁可以同步開始
-    if not time_flag:
-        time_flag = True
-        socketio.sleep(1)
-        socketio.emit("firstTimer", {"message": "Success!"}, namespace="/draft")
+    # if not time_flag:
+    # time_flag = True
+    socketio.sleep(1)
+    socketio.emit("firstTimer", {"message": "Success!"}, namespace="/draft")
 
 
 # 選秀頁面，接收user端發出的draftTimer事件

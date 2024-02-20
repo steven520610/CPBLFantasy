@@ -190,7 +190,7 @@ $(document).ready(function () {
             $("#timer").text(showTime);
         }
         // 時間到時，觸發第一個計時器
-        else {
+        else if (remainSecond == 0) {
             clearInterval(startTimer);
             socket.emit("firstTimer", true);
             console.log("firstTimer已發出！");
