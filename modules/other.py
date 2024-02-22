@@ -89,7 +89,6 @@ def login():
                         # 因為需要傳參數的關係，所以沒辦法直接使用url_for
                         # 是在javascript中使用url object來處理
                         "redirect": "/league_home",
-                        "id": id,
                         "success": True,
                         "admin": False,
                     }
@@ -239,15 +238,15 @@ def manager():
 
 
 # 聯盟首頁
-@otherBP.route("/league_home/<int:id>", methods=["GET", "POST"])
-def myleague(id):
+@otherBP.route("/league_home", methods=["GET", "POST"])
+def myleague():
     # 目前的方法透過在URL切換不同的id就可以切換不同帳號
     # 實務上在登入後建立session來存，檢查session內有無此網頁中保存的資料
     # 有的話代表登入過，確認是本人
     # 沒有的話就不能這樣透過URL輸入id來進入此網頁
     if "id" not in session:
         return redirect(url_for("other.login"))
-    query = db.session.query(Account).filter(Account.id == id).first()
+    query = db.session.query(Account).filter(Account.id == session["id"]).first()
     account = query.account
     team = query.team
     return render_template("myleague.html", account=account, team=team)

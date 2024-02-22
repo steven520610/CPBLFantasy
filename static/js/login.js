@@ -20,12 +20,7 @@ $(document).ready(function () {
             success: function (response) {
                 if (response["success"]) {
                     const url = new URL(response["redirect"], window.location.origin);
-                    if (response["admin"]) {
-                        window.location.href = url.href;
-                    }
-                    else {
-                        window.location.href = url.href + "/" + response["id"];
-                    }
+                    window.location.href = url.href;
                 }
                 else {
                     alert("帳號或密碼錯誤！");

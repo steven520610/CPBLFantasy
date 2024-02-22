@@ -26,6 +26,11 @@
     <header class="container">
         <div class="row justify-content-between">
             <div class="page">
+                <form action={{ url_for("other.myleague") }} method="POST">
+                    <input type="submit" class="btn btn-info" value="League">
+                </form>
+            </div>
+            <div class="page">
                 <form action={{ url_for("myteam.myteam") }} method="POST">
                     <input type="hidden" name="account" value={{ account }}>
                     <input type="submit" class="btn btn-primary" value="My Team">
