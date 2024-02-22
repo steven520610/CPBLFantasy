@@ -253,6 +253,11 @@ def myleague(id):
     return render_template("myleague.html", account=account, team=team)
 
 
+@otherBP.route("/error/<account>", methods=["GET"])
+def error(account):
+    return render_template("error.html", account=account)
+
+
 # 利用一個簡單的路由
 # 透過一個按鈕，確定把今日球員所累積的成績
 # 加入本週成績、球季成績

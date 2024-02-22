@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Error!</title>
+    </head>
+    <body>
+        <h3>操作失敗！因為其中一位球員已經正在比賽中，請重新選擇！</h3>
+        <form action={{ url_for("myteam.myteam")}} method="POST">
+            <input type="hidden" name="account" value={{ account }}>
+            <input type="submit" value="回myteam">
+        </form>
+    </body>
+</html>

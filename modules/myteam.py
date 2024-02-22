@@ -3,7 +3,7 @@
 # Description: 處理myteam路由中
 # 所有使用到的功能
 
-from flask import Blueprint, request, render_template, jsonify
+from flask import Blueprint, request, render_template, jsonify, redirect, url_for
 from .common import (
     Fielder,
     Pitcher,
@@ -19,7 +19,7 @@ from .common import (
     read_category,
 )
 from .config.info import *
-from sqlalchemy import Table, select, update, inspect
+from sqlalchemy import Table, select, update, inspect, Connection
 
 myteamBP = Blueprint("myteam", __name__)
 
@@ -46,41 +46,57 @@ def myteam():
     # player頁面中的addplayer路由
     # 表單才會傳下面這些資料給此路由
     try:
+        todayFielder = Table("TodayFielder", metadata, autoload_with=engine)
+        todayPitcher = Table("TodayPitcher", metadata, autoload_with=engine)
+
+        def inToday(connection: Connection, ID, type):
+            if type == "Fielder":
+                query = select(todayFielder).where(todayFielder.c.player_id == ID)
+            else:
+                query = select(todayPitcher).where(todayPitcher.c.player_id == ID)
+            result = connection.execute(query).fetchone()
+
+            return True if result else False
+
+        def updatePlayer(connection: Connection, type, id, account=None):
+            if type == "Fielder":
+                updateStmt = update(fielderTable).where(fielderTable.c.player_id == id)
+            else:
+                updateStmt = update(pitcherTable).where(pitcherTable.c.player_id == id)
+
+            updateStmt = updateStmt.values(Account=account)
+            connection.execute(updateStmt)
+
         addPlayerID = int(request.form["addPlayer"])
         addPlayerType = request.form["addPlayerType"]
         dropPlayerID = int(request.form["dropPlayer"])
         dropPlayerType = request.form["dropPlayerType"]
-        with engine.begin() as connection:
-            # 此處add進來的球員，round不會有值，依然會是NULL
-            if addPlayerType == "Fielder":
-                updateStmt = (
-                    update(fielderTable)
-                    .where(fielderTable.c.player_id == addPlayerID)
-                    .values(Account=account)
-                )
-            elif addPlayerType == "Pitcher":
-                updateStmt = (
-                    update(pitcherTable)
-                    .where(pitcherTable.c.player_id == addPlayerID)
-                    .values(Account=account)
-                )
-            connection.execute(updateStmt)
-            # 而drop的球員，只是把Account設成NULL，但round還是原本選秀的順位。
-            if dropPlayerType == "Fielder":
-                updateStmt = (
-                    update(fielderTable)
-                    .where(fielderTable.c.player_id == dropPlayerID)
-                    .values(Account=None)
-                )
-            elif dropPlayerType == "Pitcher":
-                updateStmt = (
-                    update(pitcherTable)
-                    .where(pitcherTable.c.player_id == dropPlayerID)
-                    .values(Account=None)
-                )
-            connection.execute(updateStmt)
-        # 球員交換過後，會再把該帳號的所有球員重新排列一次
-        rearrangePlayer(account)
+        with engine.connect() as connection:
+            transaction = connection.begin()
+            try:
+                # 先判斷add/drop的球員是否已經在today的Table裡
+                # 只要存在，就代表該球員已經開始比賽了
+                # 因此就不能再對該球員add/drop
+                if inToday(connection, addPlayerID, addPlayerType) or inToday(
+                    connection, dropPlayerID, dropPlayerType
+                ):
+                    return redirect(url_for("other.error", account=account))
+                else:
+                    # 有傳account的話代表是add
+                    # 沒有傳代表是drop
+
+                    # 此處add進來的球員，round不會有值，依然會是NULL
+                    # 而drop的球員，只是把Account設成NULL，但round還是原本選秀的順位。
+
+                    updatePlayer(connection, addPlayerType, addPlayerID, account)
+                    updatePlayer(connection, dropPlayerType, dropPlayerID)
+                transaction.commit()
+                # 球員交換過後，會再把該帳號的所有球員重新排列一次
+                rearrangePlayer(account)
+            except:
+                transaction.rollback()
+                raise RuntimeError("DB操作時發生錯誤！")
+
     except KeyError:
         pass
     queryAccount = db.session.query(Account).filter(Account.account == account).first()
