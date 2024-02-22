@@ -246,10 +246,37 @@ def myleague():
     # 沒有的話就不能這樣透過URL輸入id來進入此網頁
     if "id" not in session:
         return redirect(url_for("other.login"))
+
+    # 取出該帳號以及其對應的資訊
     query = db.session.query(Account).filter(Account.id == session["id"]).first()
-    account = query.account
+    myAccount = query.account
     team = query.team
-    return render_template("myleague.html", account=account, team=team)
+
+    # 處理顯示聯盟內所有matchup
+    accounts = db.session.query(Account).filter(Account.account != "admin").all()
+    account_added = []
+    matchup_list = []
+    for account in accounts:
+        if account.account not in account_added:
+            # 同時新增自己&對手到list裡面
+            account_added.append(account.account)
+            account_added.append(account.opponent)
+
+            matchup = {}
+            matchup["left"] = account.account
+            matchup["left_imgurl"] = url_for(
+                "static", filename=f"img/logo/{account.account}.png"
+            )
+            matchup["right"] = account.opponent
+            matchup["right_imgurl"] = url_for(
+                "static", filename=f"img/logo/{account.opponent}.png"
+            )
+            matchup_list.append(matchup)
+        else:
+            continue
+    return render_template(
+        "myleague.html", myAccount=myAccount, team=team, matchup_list=matchup_list
+    )
 
 
 @otherBP.route("/error/<account>", methods=["GET"])

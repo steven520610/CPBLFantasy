@@ -16,4 +16,15 @@ const app = Vue.createApp({
     },
     delimiters: ['[[', ']]']
 })
+
+
+const matchup = Vue.createApp({
+    data() {
+        return {
+            matchup_list: matchup_list
+        }
+    },
+    delimiters: ['[[', ']]']
+})
 app.mount("#app");
+matchup.mount("#matchupContainer");

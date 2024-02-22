@@ -2,16 +2,10 @@
 <html>
 
 <head>
-    <title>{{ account }}</title>
-    <link href="{{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }}" rel="stylesheet">
-    <link href="{{ url_for("static", filename="img/logo/{}.png".format(account)) }}" rel="icon">
-    <style>
-        .page {
-            flex: 1;
-            display: flex;
-            justify-content:center;
-        }
-    </style>
+    <title>{{ myAccount }}</title>
+    <link href={{ url_for("static", filename="css/bootstrap/bootstrap.min.css") }} rel="stylesheet">
+    <link href={{ url_for("static", filename="img/logo/{}.png".format(myAccount)) }} rel="icon">
+    <link href={{ url_for("static", filename="css/myleague.css") }} rel="stylesheet">
 </head>
 
 <body>
@@ -20,7 +14,7 @@
             <button id="time" @mouseover="updateTime" @mouseleave="clearTime">游標移動至此以顯示時間</button>
         </h1>
         <h2 id="date" v-if="showText">[[ currentTime ]]</h2>
-        <h3 class="text-primary">您的帳號是: {{ account }}, 您支持的球隊為:{{ team }}</h3>
+        <h3 class="text-primary">您的帳號是: {{ myAccount }}, 您支持的球隊為:{{ team }}</h3>
     </div>
 
     <header class="container">
@@ -32,33 +26,67 @@
             </div>
             <div class="page">
                 <form action={{ url_for("myteam.myteam") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="hidden" name="account" value={{ myAccount }}>
                     <input type="submit" class="btn btn-primary" value="My Team">
                 </form>
             </div>
             <div class="page">
                 <form action={{ url_for("matchup.matchup") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="hidden" name="account" value={{ myAccount }}>
                     <input type="submit" class="btn btn-success" value="Matchup">
                 </form>
             </div>
             <div class="page">
                 <form action={{ url_for("draft.draft") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="hidden" name="account" value={{ myAccount }}>
                     <input type="submit" class="btn btn-dark" value="Draft">
                 </form>
             </div>
             <div class="page">
                 <form action={{ url_for("player.player") }} method="POST">
-                    <input type="hidden" name="account" value={{ account }}>
+                    <input type="hidden" name="account" value={{ myAccount }}>
                     <input type="submit" class="btn btn-danger" value="Player">
                 </form>
             </div>
         </div>
     </header>
+    <main>
+        <div id="matchupContainer">
+            <div id="matchupHeader">
+                <h2>Matchups</h2>
+            </div>
+            <div id="matchupBody">
+                <div id="week">
+                    <div class="left">
+                        <span>🏆</span>
+                        <span style="padding-left: 5px;">Week 0 Matchups</span>
+                    </div>
+                    <div class="right">
+                        <span>In progress</span>
+                    </div>
+                </div>
+                <div v-for="matchup in matchup_list" class="singleMatchup">
+                    <div class="left">[[ matchup.left ]]</div>
+                    <div class="leftimg">
+                        <img :src="matchup.left_imgurl" class="img">
+                    </div>
+                    <div class="leftpoint">1</div>
+                    <div class="vs">vs</div>
+                    <div class="rightpoint">2</div>
+                    <div class="rightimg">
+                        <img :src="matchup.right_imgurl" class="img">
+                    </div>
+                    <div class="right">[[ matchup.right ]]</div>
+                </div>
+            </div>
+        </div>
+    </main>
     <script src={{ url_for("static", filename="js/jQuery.js") }}></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script type="module" src={{ url_for("static", filename="js/myleague.js") }}></script>
+    <script>
+        let matchup_list = {{ matchup_list|tojson }};
+    </script>
 </body>
 
 </html>
